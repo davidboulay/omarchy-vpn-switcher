@@ -22,6 +22,7 @@ var GLYPH_CHEVRON_UP = String.fromCodePoint(0xF0143)
 var GLYPH_COG = String.fromCodePoint(0xF0493)
 var GLYPH_PENCIL = String.fromCodePoint(0xF03EB)
 var GLYPH_PLUS = String.fromCodePoint(0xF0415)
+var GLYPH_MAP_MARKER = String.fromCodePoint(0xF034E)
 
 // ----------------------------------------------------------------- shared
 

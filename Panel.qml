@@ -634,41 +634,61 @@ Panel {
               id: ipLabel
               anchors.left: parent.left
               anchors.verticalCenter: parent.verticalCenter
-              width: Math.min(ipRow.implicitWidth, parent.width - header.controlsWidth)
-              height: ipRow.implicitHeight
+              width: Math.min(ipColumn.implicitWidth, parent.width - header.controlsWidth)
+              implicitHeight: ipColumn.implicitHeight
+              height: implicitHeight
 
               // Only an address is worth copying; a placeholder is not.
               readonly property bool copyable: vpn.publicIp !== "" && !vpn.ipFetching
 
-              Row {
-                id: ipRow
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: Style.space(6)
+              // Two lines: the address, then where it is. One line had no room
+              // for both beside the gear and the master switch.
+              Column {
+                id: ipColumn
+                width: parent.width
+                spacing: Style.space(2)
 
-                Text {
-                  text: "Public IP:"
-                  color: root.dim
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.bodySmall
+                Row {
+                  spacing: Style.space(6)
+
+                  Text {
+                    text: "Public IP"
+                    color: root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
+
+                  Text {
+                    text: vpn.ipFetching
+                      ? "Checking…"
+                      : (vpn.publicIp !== "" ? vpn.publicIp : (vpn.ipFailed ? "unavailable" : "—"))
+                    color: ipLabel.copyable ? root.foreground : root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    elide: Text.ElideRight
+                  }
                 }
 
-                Text {
-                  text: vpn.ipFetching
-                    ? "Checking…"
-                    : (vpn.publicIp !== "" ? vpn.publicIp : (vpn.ipFailed ? "unavailable" : "—"))
-                  color: ipLabel.copyable ? root.foreground : root.dim
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.bodySmall
-                  elide: Text.ElideRight
-                }
-
-                Text {
+                Row {
                   visible: !vpn.ipFetching && vpn.publicIp !== "" && vpn.ipLocation !== ""
-                  text: "· " + vpn.ipLocation
-                  color: root.dim
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.bodySmall
-                  elide: Text.ElideRight
+                  spacing: Style.space(4)
+
+                  Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Shared.GLYPH_MAP_MARKER
+                    color: root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
+
+                  Text {
+                    width: Math.min(implicitWidth, ipLabel.width - Style.space(16))
+                    text: vpn.ipLocation
+                    color: root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    elide: Text.ElideRight
+                  }
                 }
               }
 
