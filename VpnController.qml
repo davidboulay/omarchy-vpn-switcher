@@ -36,7 +36,7 @@ Item {
   property string selectedId: ""
 
   // The order of the chips, and of the setup hints: the first hint wins.
-  readonly property var backends: [proton, mullvad, windscribe, warp, networkManager, amneziaWg]
+  readonly property var backends: [proton, mullvad, windscribe, warp, networkManager, openVpn, amneziaWg]
   // Tools this machine has. Hiding one is a statement about the widget, not
   // about the machine, so the settings view lists these — including the hidden
   // ones, which would otherwise be unreachable once they were switched off.
@@ -379,6 +379,16 @@ Item {
   NetworkManagerBackend {
     id: networkManager
     settings: root.settings
+  }
+
+  // The same backend again, holding only OpenVPN profiles, when `openvpnChip`
+  // is on. Off, it detects nothing and runs nothing.
+  NetworkManagerBackend {
+    id: openVpn
+    settings: root.settings
+    backendId: "openvpn"
+    label: "OpenVPN"
+    installNames: []
   }
 
   AmneziaWgBackend {

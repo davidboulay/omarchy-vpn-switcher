@@ -23,6 +23,7 @@
       "preferredBackend": "Auto",
       "favoriteCountries": "CH,NL,US",
       "hiddenBackends": "",
+      "openvpnChip": false,
       "profilesDir": "~/.config/omarchy/vpn/awg-profiles",
       "systemdProfiles": "",
       "barIcon": "VPN"
@@ -60,6 +61,7 @@
           "Windscribe",
           "Cloudflare WARP",
           "NetworkManager",
+          "OpenVPN",
           "AmneziaWG"
         ],
         "defaultValue": "Auto",
@@ -87,11 +89,18 @@
         "description": "Interface names whose tunnel runs as amneziawg-tools' awg-quick@<name>.service, such as configs in /etc/amnezia/amneziawg. Listed while down, and connected with systemctl so a polkit rule for those units connects without a prompt."
       },
       {
+        "key": "openvpnChip",
+        "type": "boolean",
+        "label": "Give OpenVPN its own chip",
+        "defaultValue": false,
+        "description": "Lists NetworkManager's OpenVPN profiles under an OpenVPN chip instead of the NetworkManager one. Useful when a provider's OpenVPN servers would otherwise be mixed in with your WireGuard tunnels."
+      },
+      {
         "key": "hiddenBackends",
         "type": "string",
         "label": "Hidden VPN tools (comma separated)",
         "defaultValue": "",
-        "description": "Tools the widget ignores entirely: proton, mullvad, windscribe, warp, networkmanager, amneziawg. Also editable from the gear inside the panel."
+        "description": "Tools the widget ignores entirely: proton, mullvad, windscribe, warp, networkmanager, openvpn, amneziawg. Also editable from the gear inside the panel."
       }
     ]
   }

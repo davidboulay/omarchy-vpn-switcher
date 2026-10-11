@@ -15,13 +15,19 @@ Item {
   property var settings: ({})
   property string filter: ""
 
-  readonly property string backendId: "networkmanager"
-  readonly property string label: "NetworkManager"
+  // Overridden by the controller's second instance, which carries only the
+  // OpenVPN profiles when `openvpnChip` is on (see nmOnChip).
+  property string backendId: "networkmanager"
+  property string label: "NetworkManager"
+  readonly property bool openvpnChip: setting("openvpnChip", false) === true
+  // The OpenVPN instance is nothing at all while the setting is off: no probes,
+  // no polling, no chip, and no entry under the gear.
+  readonly property bool _chipEnabled: backendId !== "openvpn" || openvpnChip
   // Five names, because this backend is the only way to reach any of the
   // protocols and the label names the manager rather than anything you would
   // install. One per probe below: a name here that nothing probes for would
   // offer a user a tool the backend then refuses to run profiles of.
-  readonly property var installNames: ["OpenVPN", "WireGuard", "OpenConnect", "VPNC", "L2TP"]
+  property var installNames: ["OpenVPN", "WireGuard", "OpenConnect", "VPNC", "L2TP"]
 
   // The helper that authenticates an OpenConnect profile. Resolved here
   // because only the backend knows where the plugin is installed.
@@ -52,11 +58,14 @@ Item {
   // Having the tools is not having anything to connect to. NetworkManager is
   // the one backend whose list can be legitimately empty on a working install,
   // and a chip leading to an empty list is a chip worth not drawing.
-  readonly property bool detected: _toolsPresent && profiles.length > 0
+  readonly property bool detected: _chipEnabled && _toolsPresent && profiles.length > 0
 
   // Said instead of the panel's "install a VPN tool" line, which is unhelpful
   // advice for someone who has the tools and only lacks a profile.
-  readonly property string setupHint: _toolsPresent && profiles.length === 0 ? emptyText : ""
+  // The OpenVPN instance never offers it: the NetworkManager chip is the one
+  // that says "import a profile".
+  readonly property string setupHint:
+    backendId === "networkmanager" && _toolsPresent && profiles.length === 0 ? emptyText : ""
   property int _desired: -1
   property var _pendingTarget: null
   // Connecting can take two commands — down the profile that is up, then up the
@@ -107,6 +116,7 @@ Item {
   // poll a tool the user switched off. The binaries do not come and go, so once
   // probed this is nothing rather than six more processes every poll.
   function detect(force) {
+    if (!_chipEnabled) return
     if (nmcliProbe.running || openvpnProbe.running || wireguardProbe.running
         || openconnectProbe.running || vpncProbe.running || l2tpProbe.running) return
     if (_probed && force !== true) return
@@ -130,7 +140,7 @@ Item {
   // second one is still out would hand it a list the details it is holding do
   // not describe. One discovery at a time.
   function refresh() {
-    if (!_toolsPresent || listProcess.running || typesProcess.running) return
+    if (!_chipEnabled || !_toolsPresent || listProcess.running || typesProcess.running) return
     listProcess.running = true
   }
 
@@ -247,7 +257,7 @@ Item {
   function applyProfiles(list) {
     var eligible = []
     for (var i = 0; i < list.length; i++) {
-      if (runnable(list[i])) eligible.push(list[i])
+      if (runnable(list[i]) && NetworkManager.nmOnChip(list[i], backendId, openvpnChip)) eligible.push(list[i])
     }
 
     root.profiles = eligible

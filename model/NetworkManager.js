@@ -217,6 +217,18 @@ function usernameSetting(profile) {
   return "username"
 }
 
+// Which chip a profile is listed on. NetworkManager is one tool, so by default
+// one chip carries every kind. With `openvpnChip` on, OpenVPN profiles move to
+// a chip of their own — a second instance of the same backend — so a list of
+// OpenVPN servers is not interleaved with WireGuard tunnels that do something
+// else entirely. Each profile lands on exactly one chip either way: listing a
+// tunnel twice would let the two instances fight over it.
+function nmOnChip(profile, chipId, openvpnChip) {
+  var openvpn = nmKindLabel(profile) === "OpenVPN"
+  if (chipId === "openvpn") return openvpnChip === true && openvpn
+  return !(openvpnChip === true && openvpn)
+}
+
 function nmKindLabel(profile) {
   if (isWireGuard(profile)) return "WireGuard"
   if (isOpenConnect(profile)) return "OpenConnect"

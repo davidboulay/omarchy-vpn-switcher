@@ -346,3 +346,19 @@ test("nmEditCommand prefers nm-connection-editor and falls back to nmtui", () =>
   eq(NetworkManager.nmEditCommand(target, false), { argv: ["nmtui", "edit", "504905a0-29fb-45ea-a83b-7b18b465aa1e"], terminal: true })
   eq(NetworkManager.nmEditCommand({ uuid: "" }, true), null)
 })
+
+test("nmOnChip puts every profile on exactly one chip", () => {
+  const openvpn = { name: "Singapore", uuid: "u1", kind: "vpn", active: false }
+  const wireguard = { name: "Japan", uuid: "u2", kind: "wireguard", active: false }
+  const openconnect = { name: "Work", uuid: "u3", kind: "openconnect", active: false }
+  // Off: one NetworkManager chip, the OpenVPN chip stays empty and undetected.
+  eq(NetworkManager.nmOnChip(openvpn, "networkmanager", false), true)
+  eq(NetworkManager.nmOnChip(openvpn, "openvpn", false), false)
+  eq(NetworkManager.nmOnChip(wireguard, "openvpn", false), false)
+  // On: OpenVPN moves, everything else stays.
+  eq(NetworkManager.nmOnChip(openvpn, "networkmanager", true), false)
+  eq(NetworkManager.nmOnChip(openvpn, "openvpn", true), true)
+  eq(NetworkManager.nmOnChip(wireguard, "networkmanager", true), true)
+  eq(NetworkManager.nmOnChip(wireguard, "openvpn", true), false)
+  eq(NetworkManager.nmOnChip(openconnect, "networkmanager", true), true)
+})
