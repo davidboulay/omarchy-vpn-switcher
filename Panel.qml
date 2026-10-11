@@ -659,13 +659,40 @@ Panel {
                 font.pixelSize: Style.font.bodySmall
               }
 
-              Text {
+              // A ticker when the names do not fit: pause, slide to show the
+              // end, pause, slide back. Text that fits stays still.
+              Item {
+                id: stackTicker
                 width: parent.width - Style.space(20)
-                text: vpn.stackStatus.text
-                color: vpn.stackStatus.stacked ? root.foreground : root.dim
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                elide: Text.ElideRight
+                height: stackText.implicitHeight
+                clip: true
+                readonly property real overflow: Math.max(0, stackText.implicitWidth - width)
+
+                Text {
+                  id: stackText
+                  text: vpn.stackStatus.text
+                  color: vpn.stackStatus.stacked ? root.foreground : root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.bodySmall
+                }
+
+                SequentialAnimation {
+                  running: stackTicker.overflow > 0 && stackTicker.visible
+                  loops: Animation.Infinite
+                  onRunningChanged: if (!running) stackText.x = 0
+                  PauseAnimation { duration: 1500 }
+                  NumberAnimation {
+                    target: stackText; property: "x"; to: -stackTicker.overflow
+                    duration: Math.max(800, stackTicker.overflow * 25)
+                    easing.type: Easing.InOutQuad
+                  }
+                  PauseAnimation { duration: 1500 }
+                  NumberAnimation {
+                    target: stackText; property: "x"; to: 0
+                    duration: Math.max(800, stackTicker.overflow * 25)
+                    easing.type: Easing.InOutQuad
+                  }
+                }
               }
             }
 
