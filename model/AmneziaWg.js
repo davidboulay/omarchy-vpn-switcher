@@ -290,6 +290,9 @@ function awgTargets(profiles) {
     targets.push({
       key: "profile:" + profile.name,
       label: awgLabel(profile),
+      // The interface name, which the label no longer is once profileNames
+      // renames it: anything that needs a file or unit reads this.
+      name: profile.name,
       detail: detailText,
       glyph: profile.hasHooks ? Shared.GLYPH_SHIELD_LOCK : Shared.GLYPH_SHIELD,
       confFile: profile.confFile,
