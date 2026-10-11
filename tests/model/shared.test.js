@@ -73,3 +73,13 @@ test("parsePublicIp rejects anything that is not one", () => {
   eq(Shared.parsePublicIp(null), "")
   eq(Shared.parsePublicIp("1.2.3.4".padEnd(50, "0")), "")
 })
+
+// Real ipinfo.io answer for a Singapore exit, 2026-10-11 (ip and loc trimmed).
+test("parseIpLocation shows city and country code", () => {
+  eq(Shared.parseIpLocation('{"city": "Singapore", "region": "Singapore", "country": "SG", "org": "AS60068 Datacamp Limited"}'), "Singapore, SG")
+  eq(Shared.parseIpLocation('{"country": "JP"}'), "JP")
+  eq(Shared.parseIpLocation('{"city": "Tokyo", "country": "Japan"}'), "Tokyo")
+  eq(Shared.parseIpLocation('{"city": "<b>x</b>", "country": "SG"}'), "SG")
+  eq(Shared.parseIpLocation("Too many requests"), "")
+  eq(Shared.parseIpLocation(""), "")
+})
