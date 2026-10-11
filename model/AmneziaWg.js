@@ -345,7 +345,9 @@ function awgEditCommand(target, defaultEditor, rootEditHelper) {
     && path.indexOf(AWG_SYSTEM_PROFILE_DIR + "/") !== 0
   if (userFile) return { argv: ["omarchy-launch-editor", path], terminal: false }
   if (path.indexOf("/") !== 0) {
-    var name = String(target.label || path)
+    // `name` when the target carries one: a display name (profileNames) is
+    // not an interface name.
+    var name = String(target.name || target.label || path)
     if (!/^[a-zA-Z0-9_=+.-]{1,15}$/.test(name)) return null
     path = AWG_SYSTEM_PROFILE_DIR + "/" + name + ".conf"
   }
