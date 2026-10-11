@@ -26,6 +26,12 @@ Item {
   // The OpenVPN instance is nothing at all while the setting is off: no probes,
   // no polling, no chip, and no entry under the gear.
   readonly property bool _chipEnabled: backendId !== "openvpn" || openvpnChip
+  // Part of the contract's optional import verb: the panel offers a "+" and a
+  // file picker with this filter, then calls importProfile() with the path.
+  // backendId and openvpnChip are passed so a split OpenVPN chip only takes
+  // .ovpn files; on a single NetworkManager chip both are offered.
+  readonly property string importFilter:
+    NetworkManager.nmImportFilter(backendId, setting("openvpnChip", false) === true)
   // Five names, because this backend is the only way to reach any of the
   // protocols and the label names the manager rather than anything you would
   // install. One per probe below: a name here that nothing probes for would
@@ -563,6 +569,90 @@ Item {
       settleTimer.ticks = 0
       settleTimer.restart()
       root.refresh()
+    }
+  }
+
+  // Import: OpenVPN is imported → inspected → fixed up (autoconnect off,
+  // ns-cert-type swapped); WireGuard is read → created with autoconnect off.
+  // See nmWireGuardAddCommand for why WireGuard never goes through import.
+  property string _importStage: ""
+  property string _importPath: ""
+  property string _importName: ""
+  // The panel closes while the file picker is up, so the outcome is told as a
+  // notification rather than left in a status line nobody is looking at.
+  signal importFinished(bool ok, string message)
+  property string _importUuid: ""
+
+  function importProfile(path) {
+    if (importProcess.running) return
+    var kind = NetworkManager.nmImportKind(path, root.backendId, setting("openvpnChip", false) === true)
+    root._importPath = String(path)
+    root._importName = NetworkManager.nmImportName(path)
+    if (kind === "openvpn") {
+      if (!_openvpnPresent) { root.importFailed("Install openvpn and networkmanager-openvpn to import OpenVPN profiles."); return }
+      root.runImport("openvpn", ["nmcli", "connection", "import", "type", "openvpn", "file", root._importPath])
+    } else if (kind === "wireguard") {
+      if (!_wireguardPresent) { root.importFailed("Install wireguard-tools to import WireGuard configs."); return }
+      root.runImport("read", ["cat", "--", root._importPath])
+    } else {
+      root.importFailed("This chip does not take that kind of file.")
+    }
+  }
+
+  function runImport(stage, argv) {
+    root._importStage = stage
+    importProcess.command = argv
+    root.actionStatus = "Importing " + root._importName + "…"
+    importChain.restart()
+  }
+
+  function importFailed(message) {
+    root._importStage = ""
+    root.actionStatus = ""
+    root.lastError = Shared.elide(String(message || "Import failed"), 140)
+    root.importFinished(false, root.lastError)
+  }
+
+  // Each stage starts from the event loop, not from inside the previous
+  // stage's onExited — the same re-entry the connect chain avoids.
+  Timer {
+    id: importChain
+    interval: 0
+    repeat: false
+    onTriggered: importProcess.running = true
+  }
+
+  Process {
+    id: importProcess
+    running: false
+    command: []
+    stdout: StdioCollector { id: importStdout; waitForEnd: true }
+    stderr: StdioCollector { id: importStderr; waitForEnd: true }
+    onExited: function(exitCode) {
+      var out = String(importStdout.text || "")
+      if (exitCode !== 0) {
+        root.importFailed(String(importStderr.text || "").trim() || "nmcli could not import the file")
+        return
+      }
+      var stage = root._importStage
+      if (stage === "read") {
+        var spec = NetworkManager.nmWireGuardAddCommand(out, root._importName)
+        if (spec.error) { root.importFailed(spec.error); return }
+        root.runImport("add", spec.argv)
+      } else if (stage === "openvpn") {
+        root._importUuid = NetworkManager.nmImportedUuid(out)
+        if (root._importUuid === "") { root.importFailed("Imported, but nmcli did not say which profile it made."); return }
+        root.runImport("inspect", ["nmcli", "-g", "vpn.data", "connection", "show", "uuid", root._importUuid])
+      } else if (stage === "inspect") {
+        root.runImport("fixup", NetworkManager.nmOpenVpnFixupCommand(root._importUuid, out))
+      } else {
+        root._importStage = ""
+        root.lastError = ""
+        root.actionStatus = "Imported " + root._importName
+        actionStatusTimer.restart()
+        root.refresh()
+        root.importFinished(true, "Imported " + root._importName + " (not connected)")
+      }
     }
   }
 }

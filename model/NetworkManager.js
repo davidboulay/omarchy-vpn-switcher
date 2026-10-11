@@ -384,3 +384,157 @@ function nmEditCommand(target, connectionEditorPresent) {
   if (connectionEditorPresent) return { argv: ["nm-connection-editor", "--edit=" + uuid], terminal: false }
   return { argv: ["nmtui", "edit", uuid], terminal: true }
 }
+
+// --- Importing a profile from a file -------------------------------------
+//
+// The panel's "+" hands the backend a path the user picked. OpenVPN files go
+// to `nmcli connection import`, which only stores them. WireGuard files must
+// not: `nmcli connection import type wireguard` activates the tunnel the
+// moment it is stored (NetworkManager defaults autoconnect to yes, and a new
+// WireGuard profile has nothing to wait for), and a full tunnel coming up
+// unasked cuts whatever the machine was doing. So a WireGuard file is parsed
+// here and created with `nmcli connection add … connection.autoconnect no`.
+
+// Which file types the picker offers. The OpenVPN chip only takes .ovpn, and a
+// NetworkManager chip that has handed OpenVPN to that chip only takes .conf.
+function nmImportFilter(backendId, openvpnChip) {
+  if (backendId === "openvpn") return "OpenVPN profile (*.ovpn) | *.ovpn"
+  if (openvpnChip === true) return "WireGuard config (*.conf) | *.conf"
+  return "OpenVPN or WireGuard profile | *.ovpn *.conf"
+}
+
+function nmImportKind(path, backendId, openvpnChip) {
+  var lower = String(path || "").toLowerCase()
+  if (/\.ovpn$/.test(lower)) return backendId === "openvpn" || openvpnChip !== true ? "openvpn" : ""
+  if (/\.conf$/.test(lower)) return backendId === "openvpn" ? "" : "wireguard"
+  return ""
+}
+
+// The profile is named after the file, as `nmcli connection import` does.
+function nmImportName(path) {
+  var base = String(path || "").split("/").pop()
+  return base.replace(/\.(ovpn|conf)$/i, "").trim()
+}
+
+// An interface name is at most 15 characters with no space, "/" or ":".
+// "wg0 (5)" becomes "wg0-5"; a name with nothing usable falls back.
+function nmInterfaceName(name) {
+  var clean = String(name || "").replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")
+  clean = clean.substring(0, 15).replace(/-+$/, "")
+  return clean !== "" ? clean : "wg-import"
+}
+
+// Keys AmneziaWG adds to the WireGuard format. A file carrying them only
+// works under awg-quick: plain WireGuard would connect to nothing.
+var NM_AWG_ONLY_KEYS = ["jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5"]
+var NM_WG_HOOK_KEYS = ["preup", "postup", "predown", "postdown"]
+
+function nmParseWireGuardConfig(text) {
+  var config = { iface: {}, peers: [], amnezia: false, hooks: false }
+  var section = null
+  var lines = String(text || "").split(/\r?\n/)
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].replace(/[#;].*$/, "").trim()
+    if (line === "") continue
+    var header = /^\[(\w+)\]$/.exec(line)
+    if (header) {
+      var kind = header[1].toLowerCase()
+      if (kind === "peer") { section = {}; config.peers.push(section) }
+      else section = kind === "interface" ? config.iface : null
+      continue
+    }
+    var at = line.indexOf("=")
+    if (at < 0 || section === null) continue
+    var key = line.substring(0, at).trim().toLowerCase()
+    var value = line.substring(at + 1).trim()
+    if (NM_AWG_ONLY_KEYS.indexOf(key) !== -1) config.amnezia = true
+    if (NM_WG_HOOK_KEYS.indexOf(key) !== -1) config.hooks = true
+    section[key] = value
+  }
+  return config
+}
+
+function nmSplitList(value) {
+  var items = []
+  var parts = String(value || "").split(",")
+  for (var i = 0; i < parts.length; i++) {
+    var item = parts[i].trim()
+    if (item !== "") items.push(item)
+  }
+  return items
+}
+
+function nmIsWireGuardKey(value) {
+  return /^[A-Za-z0-9+/]{43}=$/.test(String(value || ""))
+}
+
+// { argv } to run, or { error } to show. The private key ends up in argv —
+// nmcli takes no other non-interactive route for it — so it is visible in the
+// process list for the moment nmcli runs, to this user and root.
+function nmWireGuardAddCommand(text, name) {
+  var config = nmParseWireGuardConfig(text)
+  if (config.amnezia) return { error: "This is an AmneziaWG config. Import it from the AmneziaWG chip." }
+  if (config.hooks) return { error: "This config has PostUp/PreDown hooks, which NetworkManager would silently skip." }
+  if (!nmIsWireGuardKey(config.iface.privatekey)) return { error: "No valid PrivateKey in [Interface]." }
+  if (config.peers.length === 0) return { error: "No [Peer] section." }
+
+  var profileName = String(name || "").trim() || "WireGuard"
+  var argv = ["nmcli", "connection", "add", "type", "wireguard",
+    "con-name", profileName, "ifname", nmInterfaceName(profileName),
+    "connection.autoconnect", "no", "wireguard.private-key", config.iface.privatekey]
+
+  var v4 = [], v6 = []
+  var addresses = nmSplitList(config.iface.address)
+  for (var i = 0; i < addresses.length; i++) (addresses[i].indexOf(":") !== -1 ? v6 : v4).push(addresses[i])
+  if (v4.length === 0 && v6.length === 0) return { error: "No Address in [Interface]." }
+  argv.push("ipv4.method", v4.length > 0 ? "manual" : "disabled")
+  if (v4.length > 0) argv.push("ipv4.addresses", v4.join(","))
+  argv.push("ipv6.method", v6.length > 0 ? "manual" : "disabled")
+  if (v6.length > 0) argv.push("ipv6.addresses", v6.join(","))
+
+  var dns4 = [], dns6 = [], search = []
+  var dns = nmSplitList(config.iface.dns)
+  for (var d = 0; d < dns.length; d++) {
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(dns[d])) dns4.push(dns[d])
+    else if (dns[d].indexOf(":") !== -1) dns6.push(dns[d])
+    else search.push(dns[d])
+  }
+  if (dns4.length > 0) argv.push("ipv4.dns", dns4.join(","))
+  if (dns6.length > 0 && v6.length > 0) argv.push("ipv6.dns", dns6.join(","))
+  if (search.length > 0) argv.push("ipv4.dns-search", search.join(","))
+
+  if (/^\d+$/.test(config.iface.mtu || "")) argv.push("wireguard.mtu", config.iface.mtu)
+  if (/^\d+$/.test(config.iface.listenport || "")) argv.push("wireguard.listen-port", config.iface.listenport)
+  if (/^(0x[0-9a-f]+|\d+)$/i.test(config.iface.fwmark || "")) argv.push("wireguard.fwmark", config.iface.fwmark)
+
+  var peers = []
+  for (var p = 0; p < config.peers.length; p++) {
+    var peer = config.peers[p]
+    if (!nmIsWireGuardKey(peer.publickey)) return { error: "A [Peer] has no valid PublicKey." }
+    var spec = peer.publickey + " allowed-ips=" + nmSplitList(peer.allowedips).join(";")
+    if (peer.endpoint) spec += " endpoint=" + peer.endpoint
+    if (nmIsWireGuardKey(peer.presharedkey)) spec += " preshared-key=" + peer.presharedkey + " preshared-key-flags=0"
+    if (/^\d+$/.test(peer.persistentkeepalive || "")) spec += " persistent-keepalive=" + peer.persistentkeepalive
+    peers.push(spec)
+  }
+  argv.push("wireguard.peers", peers.join(","))
+  return { argv: argv, name: profileName }
+}
+
+// "Connection 'Singapore' (27d00f73-…) successfully added."
+function nmImportedUuid(output) {
+  var match = /\(([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\)/.exec(String(output || ""))
+  return match ? match[1] : ""
+}
+
+// After an OpenVPN import: autoconnect off (the importer turns it on), and the
+// `ns-cert-type` provider files still carry swapped for `remote-cert-tls`,
+// its replacement in current OpenVPN. `vpnData` is `nmcli -g vpn.data` output.
+function nmOpenVpnFixupCommand(uuid, vpnData) {
+  var argv = ["nmcli", "connection", "modify", "uuid", uuid, "connection.autoconnect", "no"]
+  var match = /(?:^|,)\s*ns-cert-type\s*=\s*(\w+)/.exec(String(vpnData || ""))
+  if (match && !/(?:^|,)\s*remote-cert-tls\s*=/.test(String(vpnData || ""))) {
+    argv.push("-vpn.data", "ns-cert-type", "+vpn.data", "remote-cert-tls=" + match[1])
+  }
+  return argv
+}

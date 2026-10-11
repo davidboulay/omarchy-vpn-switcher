@@ -57,6 +57,10 @@ Panel {
   readonly property bool switcherVisible: !providersOpen && vpn.availableBackends.length > 1
   readonly property bool filterVisible: !providersOpen && backend !== null && backend.supportsFilter
   readonly property bool masterSwitchVisible: backend !== null
+  // Optional import verb: a backend that offers it has importFilter and
+  // importProfile(path). The panel owns the picker so no backend needs one.
+  readonly property bool importAvailable: !providersOpen && backend !== null
+    && typeof backend.importProfile === "function" && String(backend.importFilter || "") !== ""
   readonly property bool headerHasCursor: cursorActive && focusSection === "header"
   readonly property bool gearHasCursor: headerHasCursor && headerIndex === 0
   readonly property bool switchHasCursor: headerHasCursor && headerIndex === 1
@@ -411,6 +415,39 @@ Panel {
     onTriggered: root.ipCopied = false
   }
 
+  // The panel is a layer above every window, so it gets out of the way of the
+  // picker; the backend reports the outcome as a notification (see below).
+  function pickImportFile() {
+    if (!importAvailable || importPicker.running) return
+    importPicker.target = backend
+    importPicker.command = ["zenity", "--file-selection",
+      "--title=Import a " + backend.label + " profile",
+      "--file-filter=" + backend.importFilter, "--file-filter=All files | *"]
+    importPicker.running = true
+    root.close()
+  }
+
+  Process {
+    id: importPicker
+    property var target: null
+    running: false
+    command: []
+    stdout: StdioCollector { id: importPickerStdout; waitForEnd: true }
+    onExited: function(exitCode) {
+      var path = String(importPickerStdout.text || "").trim()
+      // Non-zero is Cancel, or the dialog closed: nothing was asked for.
+      if (exitCode === 0 && path !== "" && importPicker.target) importPicker.target.importProfile(path)
+    }
+  }
+
+  Connections {
+    target: importPicker.target
+    ignoreUnknownSignals: true
+    function onImportFinished(ok, message) {
+      Quickshell.execDetached(["notify-send", "-a", "VPN", ok ? "Profile imported" : "Import failed", message])
+    }
+  }
+
   // A backend can hand back a command that only works with a human at a
   // keyboard — NetworkManager asking for VPN credentials it does not store.
   // The panel gets out of the way and lets a terminal own that conversation.
@@ -560,6 +597,7 @@ Panel {
         else if (t === "e" || t === "E") {
           if (root.cursorActive && root.focusSection === "rows") root.editRow(root.rows[root.rowIndex])
         }
+        else if (t === "a" || t === "A" || t === "+") root.pickImportFile()
       }
 
       Flickable {
@@ -750,6 +788,34 @@ Panel {
                 visible: parent.containsMouse
                 text: root.settingsExpanded ? "Hide settings" : "Show settings"
                 fontFamily: root.fontFamily
+              }
+            }
+
+            // Sits over the hero's own MouseArea, left of the settings chevron.
+            Text {
+              id: importButton
+              visible: root.importAvailable
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              anchors.rightMargin: Style.space(4) + (root.settingsAvailable ? Style.font.icon + Style.space(8) : 0)
+              text: Shared.GLYPH_PLUS
+              color: importMouse.containsMouse ? root.foreground : root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.icon
+
+              MouseArea {
+                id: importMouse
+                anchors.fill: parent
+                anchors.margins: -Style.space(4)
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.pickImportFile()
+
+                PanelToolTip {
+                  visible: parent.containsMouse
+                  text: "Import a " + (root.backend ? root.backend.label : "") + " profile (a)"
+                  fontFamily: root.fontFamily
+                }
               }
             }
           }

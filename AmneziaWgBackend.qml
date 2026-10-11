@@ -81,6 +81,8 @@ Item {
   readonly property string summary: AmneziaWg.awgSummary(profiles)
   readonly property var details: AmneziaWg.awgDetails(profiles, healthByInterface)
   readonly property var targets: AmneziaWg.awgTargets(profiles)
+  // Part of the contract's optional import verb; see AmneziaWg.awgImportCommand.
+  readonly property string importFilter: "AmneziaWG config (*.conf) | *.conf"
   readonly property string emptyText: "No profiles yet. Drop an AmneziaWG *.conf in " + profilesDir
   // Said instead of the panel's "install a VPN tool" line, which is unhelpful
   // advice for someone who has awg-quick and only lacks a profile.
@@ -435,6 +437,41 @@ Item {
         settleTimer.running = false
         root._desired = -1
       }
+    }
+  }
+
+  property string _importName: ""
+  // The panel closes while the file picker is up, so the outcome is told as a
+  // notification rather than left in a status line nobody is looking at.
+  signal importFinished(bool ok, string message)
+
+  function importProfile(path) {
+    if (importProcess.running) return
+    var spec = AmneziaWg.awgImportCommand(path, root.profilesDir)
+    if (spec.error) { root.lastError = spec.error; root.importFinished(false, spec.error); return }
+    root._importName = spec.name
+    root.actionStatus = "Importing " + spec.name + "…"
+    importProcess.command = spec.argv
+    importProcess.running = true
+  }
+
+  Process {
+    id: importProcess
+    running: false
+    command: []
+    stderr: StdioCollector { id: importStderr; waitForEnd: true }
+    onExited: function(exitCode) {
+      if (exitCode !== 0) {
+        root.actionStatus = ""
+        root.lastError = Shared.elide(String(importStderr.text || "").trim() || "Could not copy the profile", 140)
+        root.importFinished(false, root.lastError)
+        return
+      }
+      root.lastError = ""
+      root.actionStatus = "Imported " + root._importName
+      actionStatusTimer.restart()
+      root.refresh()
+      root.importFinished(true, "Imported " + root._importName + " (not connected)")
     }
   }
 }

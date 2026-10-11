@@ -371,3 +371,66 @@ test("nmChipLabel names a one-kind chip after the kind", () => {
   eq(NetworkManager.nmChipLabel([wg("Japan"), ovpn], "NetworkManager"), "NetworkManager")
   eq(NetworkManager.nmChipLabel([], "NetworkManager"), "NetworkManager")
 })
+
+// Shaped like the Astrill download that prompted the import button; keys are
+// throwaway values in the right format.
+const WG_SAMPLE = [
+  "[Interface]",
+  "PrivateKey = cE5ub3RhcmVhbGtleW5vdGFyZWFsa2V5bm90YXJlYWw=",
+  "Address = 198.19.66.181/16",
+  "MTU = 1340",
+  "DNS = 198.19.0.1",
+  "",
+  "[Peer]",
+  "PublicKey = zsY88/ElpYoOTeReVLuah/zKNS6FtGuT5la9AS6kMgA=",
+  "Endpoint = jpdp1.wg.asn247.net:26577",
+  "AllowedIPs = 0.0.0.0/0,::0/0"
+].join("\n")
+
+test("nmWireGuardAddCommand creates the profile with autoconnect off", () => {
+  const spec = NetworkManager.nmWireGuardAddCommand(WG_SAMPLE, "wg0 (5)")
+  eq(spec.error, undefined)
+  eq(spec.argv.slice(0, 9), ["nmcli", "connection", "add", "type", "wireguard", "con-name", "wg0 (5)", "ifname", "wg0-5"])
+  const at = (k) => spec.argv[spec.argv.indexOf(k) + 1]
+  eq(at("connection.autoconnect"), "no")
+  eq(at("ipv4.addresses"), "198.19.66.181/16")
+  eq(at("ipv6.method"), "disabled")
+  eq(at("ipv4.dns"), "198.19.0.1")
+  eq(at("wireguard.mtu"), "1340")
+  eq(at("wireguard.peers"), "zsY88/ElpYoOTeReVLuah/zKNS6FtGuT5la9AS6kMgA= allowed-ips=0.0.0.0/0;::0/0 endpoint=jpdp1.wg.asn247.net:26577")
+})
+
+test("nmWireGuardAddCommand refuses what NetworkManager cannot carry", () => {
+  eq(typeof NetworkManager.nmWireGuardAddCommand(WG_SAMPLE.replace("MTU = 1340", "Jc = 4"), "x").error, "string")
+  eq(typeof NetworkManager.nmWireGuardAddCommand(WG_SAMPLE.replace("MTU = 1340", "PostUp = iptables -A x"), "x").error, "string")
+  eq(typeof NetworkManager.nmWireGuardAddCommand(WG_SAMPLE.replace(/PrivateKey = .*/, "PrivateKey = short"), "x").error, "string")
+  eq(typeof NetworkManager.nmWireGuardAddCommand("[Interface]\nPrivateKey = cE5ub3RhcmVhbGtleW5vdGFyZWFsa2V5bm90YXJlYWw=\nAddress = 10.0.0.2/32", "x").error, "string")
+})
+
+test("nmImportKind routes by extension and chip", () => {
+  eq(NetworkManager.nmImportKind("/d/UDP-Singapore-1.ovpn", "networkmanager", false), "openvpn")
+  eq(NetworkManager.nmImportKind("/d/UDP-Singapore-1.ovpn", "networkmanager", true), "")
+  eq(NetworkManager.nmImportKind("/d/UDP-Singapore-1.OVPN", "openvpn", true), "openvpn")
+  eq(NetworkManager.nmImportKind("/d/wg0.conf", "openvpn", true), "")
+  eq(NetworkManager.nmImportKind("/d/wg0.conf", "networkmanager", true), "wireguard")
+  eq(NetworkManager.nmImportKind("/d/notes.txt", "networkmanager", false), "")
+})
+
+test("nmInterfaceName makes a valid interface name out of any file name", () => {
+  eq(NetworkManager.nmInterfaceName("wg0 (5)"), "wg0-5")
+  eq(NetworkManager.nmInterfaceName("A very long provider name"), "A-very-long-pro")
+  eq(NetworkManager.nmInterfaceName("((()))"), "wg-import")
+})
+
+test("nmImportedUuid reads nmcli's confirmation", () => {
+  eq(NetworkManager.nmImportedUuid("Connection 'Singapore' (27d00f73-b8c0-4ea2-90b2-deb1b103c62c) successfully added."),
+    "27d00f73-b8c0-4ea2-90b2-deb1b103c62c")
+  eq(NetworkManager.nmImportedUuid("Error: failed"), "")
+})
+
+test("nmOpenVpnFixupCommand swaps ns-cert-type and turns autoconnect off", () => {
+  eq(NetworkManager.nmOpenVpnFixupCommand("u", "ca = /x, ns-cert-type = server, port = 8292"),
+    ["nmcli", "connection", "modify", "uuid", "u", "connection.autoconnect", "no", "-vpn.data", "ns-cert-type", "+vpn.data", "remote-cert-tls=server"])
+  eq(NetworkManager.nmOpenVpnFixupCommand("u", "remote-cert-tls = server"),
+    ["nmcli", "connection", "modify", "uuid", "u", "connection.autoconnect", "no"])
+})
