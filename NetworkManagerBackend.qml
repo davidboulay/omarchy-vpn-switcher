@@ -18,7 +18,10 @@ Item {
   // Overridden by the controller's second instance, which carries only the
   // OpenVPN profiles when `openvpnChip` is on (see nmOnChip).
   property string backendId: "networkmanager"
-  property string label: "NetworkManager"
+  // What the `preferredBackend` setting matches, which must not move with the
+  // profile list. `label` is what the chip shows (see nmChipLabel).
+  property string preferenceLabel: "NetworkManager"
+  readonly property string label: NetworkManager.nmChipLabel(profiles, preferenceLabel)
   readonly property bool openvpnChip: setting("openvpnChip", false) === true
   // The OpenVPN instance is nothing at all while the setting is off: no probes,
   // no polling, no chip, and no entry under the gear.

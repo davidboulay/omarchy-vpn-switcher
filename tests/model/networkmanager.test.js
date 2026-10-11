@@ -362,3 +362,12 @@ test("nmOnChip puts every profile on exactly one chip", () => {
   eq(NetworkManager.nmOnChip(wireguard, "openvpn", true), false)
   eq(NetworkManager.nmOnChip(openconnect, "networkmanager", true), true)
 })
+
+test("nmChipLabel names a one-kind chip after the kind", () => {
+  const wg = (n) => ({ name: n, uuid: n, kind: "wireguard", active: false })
+  const ovpn = { name: "Singapore", uuid: "s", kind: "vpn", active: false }
+  eq(NetworkManager.nmChipLabel([wg("Japan"), wg("Office")], "NetworkManager"), "WireGuard")
+  eq(NetworkManager.nmChipLabel([ovpn], "OpenVPN"), "OpenVPN")
+  eq(NetworkManager.nmChipLabel([wg("Japan"), ovpn], "NetworkManager"), "NetworkManager")
+  eq(NetworkManager.nmChipLabel([], "NetworkManager"), "NetworkManager")
+})

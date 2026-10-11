@@ -193,7 +193,7 @@ Item {
   function preferredId() {
     var preferred = String(setting("preferredBackend", "Auto"))
     for (var i = 0; i < root.backends.length; i++) {
-      if (root.backends[i].label === preferred) return root.backends[i].backendId
+      if ((root.backends[i].preferenceLabel || root.backends[i].label) === preferred) return root.backends[i].backendId
     }
     return ""
   }
@@ -387,7 +387,7 @@ Item {
     id: openVpn
     settings: root.settings
     backendId: "openvpn"
-    label: "OpenVPN"
+    preferenceLabel: "OpenVPN"
     installNames: []
   }
 
