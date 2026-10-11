@@ -746,6 +746,51 @@ Panel {
             }
           }
 
+          // Stacking changes what a click on a row does, so its state is shown
+          // here rather than only under the gear. Clicking it flips it.
+          Item {
+            visible: !root.providersOpen && vpn.anyDetected
+            width: parent.width
+            implicitHeight: stackRow.implicitHeight
+
+            Row {
+              id: stackRow
+              width: parent.width
+              spacing: Style.space(6)
+
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: vpn.stackStatus.glyph
+                color: vpn.stackStatus.stacked ? root.foreground : root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+              }
+
+              Text {
+                width: parent.width - Style.space(20)
+                text: vpn.stackStatus.text
+                color: vpn.stackStatus.stacked ? root.foreground : root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                elide: Text.ElideRight
+              }
+            }
+
+            MouseArea {
+              id: stackMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.saveSetting(Shared.STACK_OPTION, !vpn.stackConnections)
+            }
+
+            PanelToolTip {
+              visible: stackMouse.containsMouse
+              text: vpn.stackConnections ? "Click: one tunnel at a time" : "Click: let tunnels from different tools run together"
+              fontFamily: root.fontFamily
+            }
+          }
+
           ButtonGroup {
             id: switcher
             visible: root.switcherVisible

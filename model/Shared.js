@@ -164,6 +164,23 @@ function tunnelsToDrop(othersConnected, stackConnections) {
 // reuses the provider row's shape — `hidden` drives the switch, inverted — so
 // the panel needs no row type of its own; `option` is what tells them apart.
 var STACK_OPTION = "stackConnections"
+var GLYPH_LAYERS = String.fromCodePoint(0xF0328)
+var GLYPH_LAYERS_OFF = String.fromCodePoint(0xF0329)
+
+// The always-visible line under the header: whether connects stack, and what
+// is stacked right now. `names` are the connected tunnels' summaries, one per
+// tool. Short, because it shares the panel's width with nothing else but has
+// to be read at a glance.
+function stackStatus(stackConnections, names) {
+  var up = names || []
+  if (stackConnections !== true) {
+    return { on: false, stacked: false, glyph: GLYPH_LAYERS_OFF, text: "Stacking off · one tunnel at a time" }
+  }
+  if (up.length >= 2) {
+    return { on: true, stacked: true, glyph: GLYPH_LAYERS, text: "Stacked · " + up.join(" + ") }
+  }
+  return { on: true, stacked: false, glyph: GLYPH_LAYERS, text: "Stacking on · tools can run together" }
+}
 
 function stackOptionRow(stackConnections, glyph) {
   var on = stackConnections === true
