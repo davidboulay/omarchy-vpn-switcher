@@ -482,6 +482,7 @@ Panel {
     function refresh(): string { vpn.refreshAll(true); vpn.refreshPublicIp(); return "ok" }
     function status(): string { return vpn.barSummary }
     function ip(): string { return vpn.publicIp !== "" ? vpn.publicIp : "unknown" }
+    function location(): string { return vpn.ipLocation !== "" ? vpn.ipLocation : "unknown" }
     // The command that clears the setup hint, run in a terminal as a click on
     // the hint would. Answers "none" when nothing needs setting up, and "no bar"
     // when this instance has no bar to open a terminal from.
@@ -542,7 +543,7 @@ Panel {
     text: Shared.barIconGlyph(root.settings ? root.settings.barIcon : "")
     iconComponent: text === "" ? wireGuardMark : null
     dimmed: !vpn.anyConnected
-    tooltipText: "VPN: " + vpn.barSummary
+    tooltipText: "VPN: " + vpn.barSummary + (vpn.ipLocation !== "" ? "\nExit: " + vpn.ipLocation : "")
     onPressed: function(buttonCode) {
       if (buttonCode === Qt.RightButton) vpn.toggleActive()
       else if (buttonCode === Qt.MiddleButton) { vpn.refreshAll(true); vpn.refreshPublicIp() }
@@ -656,6 +657,15 @@ Panel {
                     ? "Checking…"
                     : (vpn.publicIp !== "" ? vpn.publicIp : (vpn.ipFailed ? "unavailable" : "—"))
                   color: ipLabel.copyable ? root.foreground : root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.bodySmall
+                  elide: Text.ElideRight
+                }
+
+                Text {
+                  visible: !vpn.ipFetching && vpn.publicIp !== "" && vpn.ipLocation !== ""
+                  text: "· " + vpn.ipLocation
+                  color: root.dim
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.bodySmall
                   elide: Text.ElideRight

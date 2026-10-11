@@ -118,6 +118,9 @@ Item {
   property string publicIp: ""
   property bool ipFetching: false
   property bool ipFailed: false
+  // "City, CC" for publicIp, looked up once per new address (see below).
+  property string ipLocation: ""
+  property string _locatedIp: ""
 
   // Identifies the tunnel currently carrying traffic. Any change to it — a
   // connect, a disconnect, a server switch — means the exit address changed,
@@ -165,9 +168,37 @@ Item {
       if (exitCode === 0 && address !== "") {
         root.publicIp = address
         root.ipFailed = false
+        if (address !== root._locatedIp) root.locatePublicIp(address)
       } else {
         root.ipFailed = true
       }
+    }
+  }
+
+  // A second, optional request, only when the address changed: the location
+  // is a property of the address, so asking again for the same one would only
+  // repeat the answer. The request goes out the same way the IP check did —
+  // through the tunnel when one is up — so ipinfo.io learns nothing the exit
+  // address had not already told checkip. On failure the location is left
+  // blank: the address is still right, and a guessed country would not be.
+  function locatePublicIp(address) {
+    if (locateProcess.running) return
+    root.ipLocation = ""
+    root._locatedIp = address
+    locateProcess.command = ["curl", "--silent", "--fail", "--max-time", "6", "https://ipinfo.io/" + address + "/json"]
+    locateProcess.running = true
+  }
+
+  Process {
+    id: locateProcess
+    running: false
+    command: []
+    stdout: StdioCollector { id: locateStdout; waitForEnd: true }
+    onExited: function(exitCode) {
+      // An answer that lands after the address moved on describes the old one.
+      if (root._locatedIp !== root.publicIp) return
+      root.ipLocation = exitCode === 0 ? Shared.parseIpLocation(String(locateStdout.text || "")) : ""
+      if (root.ipLocation === "") root._locatedIp = ""
     }
   }
 

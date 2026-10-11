@@ -98,3 +98,13 @@ test("stackOptionRow drives the provider switch inverted through hidden", () => 
   eq(off.backendId, undefined)
   eq(Shared.stackOptionRow(true, "g").hidden, false)
 })
+
+// Real ipinfo.io answer for a Singapore exit, 2026-10-11 (ip and loc trimmed).
+test("parseIpLocation shows city and country code", () => {
+  eq(Shared.parseIpLocation('{"city": "Singapore", "region": "Singapore", "country": "SG", "org": "AS60068 Datacamp Limited"}'), "Singapore, SG")
+  eq(Shared.parseIpLocation('{"country": "JP"}'), "JP")
+  eq(Shared.parseIpLocation('{"city": "Tokyo", "country": "Japan"}'), "Tokyo")
+  eq(Shared.parseIpLocation('{"city": "<b>x</b>", "country": "SG"}'), "SG")
+  eq(Shared.parseIpLocation("Too many requests"), "")
+  eq(Shared.parseIpLocation(""), "")
+})

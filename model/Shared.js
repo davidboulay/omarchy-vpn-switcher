@@ -46,6 +46,26 @@ function barIconGlyph(setting) {
 // to decide whether the tunnel is carrying their traffic, so rendering
 // whatever arrived would be the widget confirming a route it never saw.
 // Returns "" for anything that is not an address literal.
+// ipinfo.io's JSON for the exit address, as "City, CC" ("Singapore, SG").
+// It is shown beside the public IP because an address alone does not tell you
+// which country you came out in, and that is the thing a switch is meant to
+// change. Only short plain-text fields are taken; anything else is dropped
+// rather than drawn.
+function parseIpLocation(raw) {
+  var data
+  try { data = JSON.parse(String(raw || "")) } catch (e) { return "" }
+  if (!data || typeof data !== "object") return ""
+  function clean(value) {
+    var text = typeof value === "string" ? value.trim() : ""
+    return /^[^\u0000-\u001f<>]{1,40}$/.test(text) ? text : ""
+  }
+  var country = clean(data.country)
+  if (!/^[A-Z]{2}$/.test(country)) country = ""
+  var city = clean(data.city)
+  if (city !== "" && country !== "") return city + ", " + country
+  return city !== "" ? city : country
+}
+
 function parsePublicIp(raw) {
   var text = String(raw || "").trim()
   // Longest possible IPv6 text form; anything longer is not an address.
