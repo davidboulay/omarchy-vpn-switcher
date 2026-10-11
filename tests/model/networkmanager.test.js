@@ -339,3 +339,19 @@ test("nmSummary tells no profiles from none connected", () => {
   eq(NetworkManager.nmSummary([{ name: "Work", active: false }]), "Not connected")
   eq(NetworkManager.nmSummary([{ name: "Work", active: true }]), "Work")
 })
+
+test("nmOnChip puts every profile on exactly one chip", () => {
+  const openvpn = { name: "Singapore", uuid: "u1", kind: "vpn", active: false }
+  const wireguard = { name: "Japan", uuid: "u2", kind: "wireguard", active: false }
+  const openconnect = { name: "Work", uuid: "u3", kind: "openconnect", active: false }
+  // Off: one NetworkManager chip, the OpenVPN chip stays empty and undetected.
+  eq(NetworkManager.nmOnChip(openvpn, "networkmanager", false), true)
+  eq(NetworkManager.nmOnChip(openvpn, "openvpn", false), false)
+  eq(NetworkManager.nmOnChip(wireguard, "openvpn", false), false)
+  // On: OpenVPN moves, everything else stays.
+  eq(NetworkManager.nmOnChip(openvpn, "networkmanager", true), false)
+  eq(NetworkManager.nmOnChip(openvpn, "openvpn", true), true)
+  eq(NetworkManager.nmOnChip(wireguard, "networkmanager", true), true)
+  eq(NetworkManager.nmOnChip(wireguard, "openvpn", true), false)
+  eq(NetworkManager.nmOnChip(openconnect, "networkmanager", true), true)
+})
