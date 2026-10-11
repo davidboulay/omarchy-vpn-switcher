@@ -223,6 +223,20 @@ function usernameSetting(profile) {
 // OpenVPN servers is not interleaved with WireGuard tunnels that do something
 // else entirely. Each profile lands on exactly one chip either way: listing a
 // tunnel twice would let the two instances fight over it.
+// The chip is named after what it holds when that is one kind: a chip of
+// WireGuard tunnels reads "WireGuard", not the name of the daemon behind it.
+// Mixed kinds, or none, keep the manager's name, which is the only honest
+// umbrella for them.
+function nmChipLabel(profiles, fallback) {
+  var kind = ""
+  for (var i = 0; i < (profiles || []).length; i++) {
+    var next = nmKindLabel(profiles[i])
+    if (kind !== "" && next !== kind) return fallback
+    kind = next
+  }
+  return kind !== "" ? kind : fallback
+}
+
 function nmOnChip(profile, chipId, openvpnChip) {
   var openvpn = nmKindLabel(profile) === "OpenVPN"
   if (chipId === "openvpn") return openvpnChip === true && openvpn
