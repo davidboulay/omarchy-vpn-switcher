@@ -48,6 +48,7 @@ Panel {
       hidden: hidden
     }
   }).concat(vpn.detectedBackends.length > 0 ? [Shared.stackOptionRow(vpn.stackConnections, Shared.GLYPH_VPN)] : [])
+    .concat(vpn.awgMissing.length > 0 ? [Shared.installAwgRow(vpn.awgMissing, Shared.GLYPH_SHIELD)] : [])
   readonly property var rows: providersOpen ? providerRows : (backend ? backend.targets : [])
   // Tool settings, for the backends that have any. A backend without them
   // simply has no block here.
@@ -290,6 +291,13 @@ Panel {
   }
 
   function toggleProvider(row) {
+    if (row && row.option === Shared.INSTALL_AWG_OPTION) {
+      if (!root.bar) return
+      root.bar.run("omarchy-launch-floating-terminal-with-presentation " + Util.shellQuote(row.command))
+      vpn.watchAwgInstall()
+      root.close()
+      return
+    }
     if (row && row.option === Shared.STACK_OPTION) {
       saveSetting(Shared.STACK_OPTION, !vpn.stackConnections)
       return

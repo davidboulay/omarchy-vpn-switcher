@@ -412,3 +412,15 @@ test("awgImportCommand copies into the profile directory under the interface nam
   eq(typeof AmneziaWg.awgImportCommand("/d/a.ovpn", "/p").error, "string")
   eq(typeof AmneziaWg.awgImportCommand("/d/a.conf", "").error, "string")
 })
+
+test("awgMissingPackages names the tools and the engine separately", () => {
+  eq(AmneziaWg.awgMissingPackages(true, true, true), [])
+  eq(AmneziaWg.awgMissingPackages(true, true, false), ["amneziawg-go"])
+  eq(AmneziaWg.awgMissingPackages(true, false, true), ["amneziawg-tools"])
+  eq(AmneziaWg.awgMissingPackages(false, false, false), ["amneziawg-tools", "amneziawg-go"])
+})
+
+test("awgEmptyText points at the engine before the profiles", () => {
+  eq(AmneziaWg.awgEmptyText("/p", false).indexOf("amneziawg-go") !== -1, true)
+  eq(AmneziaWg.awgEmptyText("/p", true).indexOf("Press +") !== -1, true)
+})

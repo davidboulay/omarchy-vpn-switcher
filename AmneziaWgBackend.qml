@@ -35,6 +35,7 @@ Item {
 
   property bool _awgPresent: false
   property bool _awgQuickPresent: false
+  property bool _enginePresent: false
   property int _probesDone: 0
   property bool _probed: false
   // Asked once, the first time there is a list worth building: does
@@ -73,7 +74,12 @@ Item {
   // NetworkManagerBackend applies to a tool with a daemon behind it. The list
   // is not only what is on disk: a tunnel someone started outside the widget
   // counts, which is what keeps the chip there to take it down again.
-  readonly property bool detected: _toolsPresent && profiles.length > 0
+  //
+  // Since the + import, an empty chip is drawn too: it is where the first
+  // profile comes in. Not drawn without the tools; the gear offers to install
+  // them instead (missingPackages).
+  readonly property bool detected: _toolsPresent
+  readonly property var missingPackages: AmneziaWg.awgMissingPackages(_awgPresent, _awgQuickPresent, _enginePresent)
   readonly property bool _activeNow: AmneziaWg.activeAwgProfile(profiles) !== null
   readonly property bool connected: _desired === -1 ? _activeNow : (_desired === 1)
   readonly property bool _working: connectProcess.running || chainTimer.running || _stage !== ""
@@ -83,10 +89,9 @@ Item {
   readonly property var targets: AmneziaWg.awgTargets(profiles)
   // Part of the contract's optional import verb; see AmneziaWg.awgImportCommand.
   readonly property string importFilter: "AmneziaWG config (*.conf) | *.conf"
-  readonly property string emptyText: "No profiles yet. Drop an AmneziaWG *.conf in " + profilesDir
-  // Said instead of the panel's "install a VPN tool" line, which is unhelpful
-  // advice for someone who has awg-quick and only lacks a profile.
-  readonly property string setupHint: _toolsPresent && profiles.length === 0 ? emptyText : ""
+  readonly property string emptyText: AmneziaWg.awgEmptyText(profilesDir, _enginePresent)
+  // A detected chip says this in its own list instead.
+  readonly property string setupHint: ""
   readonly property var activeProfile: AmneziaWg.activeAwgProfile(profiles)
   readonly property string currentKey: activeProfile ? "profile:" + activeProfile.name : ""
 
@@ -108,11 +113,12 @@ Item {
   // user forces it. The listing that `detected` also depends on is started from
   // _probeFinished rather than from here, so this stays a probe.
   function detect(force) {
-    if (awgProbe.running || awgQuickProbe.running) return
+    if (awgProbe.running || awgQuickProbe.running || engineProbe.running) return
     if (_probed && force !== true) return
     _probesDone = 0
     awgProbe.running = true
     awgQuickProbe.running = true
+    engineProbe.running = true
   }
 
   // The one listing a hidden backend gets. `detected` depends on the profile
@@ -123,7 +129,7 @@ Item {
   // polling for a hidden tool" both hold. NetworkManagerBackend does the same.
   function _probeFinished() {
     root._probesDone += 1
-    if (root._probesDone < 2) return
+    if (root._probesDone < 3) return
     root._probed = true
     if (root._toolsPresent) root.refresh()
   }
@@ -169,6 +175,10 @@ Item {
 
   function connectTo(target) {
     if (!_toolsPresent || _working || !target || !target.confFile) return
+    if (!_enginePresent) {
+      root.lastError = AmneziaWg.awgEmptyText(profilesDir, false)
+      return
+    }
 
     if (target.blocked || target.hasHooks) {
       root.lastError = "Blocked: profile contains executable root hooks (PostUp/PreUp). Remove hooks to connect."
@@ -251,6 +261,38 @@ Item {
     onExited: function(exitCode) {
       root._awgPresent = exitCode === 0
       root._probeFinished()
+    }
+  }
+
+  // The engine: amneziawg-go on PATH, or the kernel module (loaded, or
+  // loadable). Either carries the tunnel awg-quick configures.
+  Process {
+    id: engineProbe
+    command: ["sh", "-c", "command -v amneziawg-go >/dev/null || test -d /sys/module/amneziawg || modinfo amneziawg >/dev/null 2>&1"]
+    running: true
+    onExited: function(exitCode) {
+      root._enginePresent = exitCode === 0
+      root._probeFinished()
+    }
+  }
+
+  // After the install button opens its terminal there is no exit to wait on,
+  // so the probes are re-run until the packages show up (or ~10 minutes pass).
+  function watchInstall() {
+    installWatch.ticks = 0
+    installWatch.restart()
+  }
+
+  Timer {
+    id: installWatch
+    property int ticks: 0
+    interval: 10000
+    repeat: true
+    running: false
+    onTriggered: {
+      ticks += 1
+      if (root.missingPackages.length === 0 || ticks > 60) { running = false; return }
+      root.detect(true)
     }
   }
 

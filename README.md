@@ -38,6 +38,19 @@ placement.
 To update later: `omarchy plugin update`. To remove:
 `omarchy plugin remove davidboulay.vpn-switcher`.
 
+## What VPN Switcher adds
+
+| Feature | How |
+|---|---|
+| **Stack connections** | Off: connecting one VPN disconnects the others. On: tunnels from different tools stay up together, e.g. an office network next to a full tunnel. The line under the header shows "Stacking off", "Stacking on" or "Stacked · A + B" (it scrolls when long); click it to flip |
+| **Import a profile** | The **+** on a tool's name row (or `a`) opens a file picker. OpenVPN `.ovpn` goes through `nmcli connection import` (autoconnect off, `ns-cert-type` modernised); WireGuard `.conf` is created with `nmcli connection add … autoconnect no`, because a plain import brings the tunnel up at once; AmneziaWG `.conf` is copied, owner-only, into `profilesDir`. A notification reports the result; nothing is connected |
+| **Exit location** | The public IP's city and country on a second line (ipinfo.io, asked once per new address, through the tunnel), and in the bar tooltip |
+| **Empty chips** | A chip appears once its tool is installed, so the first profile can be imported into it |
+| **AmneziaWG install** | When `amneziawg-tools` or an engine (`amneziawg-go` / kernel module) is missing, the gear offers **Install AmneziaWG**, which runs `omarchy-pkg-aur-add` in a terminal |
+| **AmneziaWG under systemd** | `systemdProfiles` lists root-owned tunnels while down and connects them through `awg-quick@<name>.service`, so a polkit rule can allow it without a prompt |
+| **Edit a profile** | Pencil or `e`: NetworkManager profiles open in `nm-connection-editor`; root-owned AmneziaWG files go through a polkit helper that edits a private copy |
+| **OpenVPN chip, chip names** | `openvpnChip` splits OpenVPN off; a NetworkManager chip with one kind of tunnel is named after it ("WireGuard") |
+
 ## Using it
 
 The bar icon is dim when nothing is connected and bright when a tunnel is up.
@@ -122,8 +135,8 @@ Omarchy with its Quickshell desktop, plus at least one of:
   both, and offers an install button under the gear when something is missing.
 - **OpenVPN, WireGuard, OpenConnect, VPNC or L2TP/IPsec** — `nmcli`, plus
   `openvpn`, `wg` (wireguard-tools), `networkmanager-openconnect`,
-  `networkmanager-vpnc`, or `networkmanager-l2tp`, with at least one profile
-  imported into NetworkManager.
+  `networkmanager-vpnc`, or `networkmanager-l2tp`. A chip appears as soon as
+  the tool is installed; its + imports the first profile.
 
 ## Settings
 
@@ -135,7 +148,13 @@ Configure these in **Setup › Plugins**, or in the widget's entry in
 | `refreshIntervalSec` | `15` | How often the connection status is polled |
 | `preferredBackend` | `Auto` | Which tool the panel opens on. `Auto` picks whichever is connected |
 | `favoriteCountries` | `CH,NL,US` | Country codes pinned to the top of the Proton VPN and Mullvad lists. Windscribe has no codes, so it matches names instead — see below |
-| `hiddenBackends` | *(empty)* | Tools the widget ignores entirely: `proton`, `mullvad`, `windscribe`, `warp`, `networkmanager`, `amneziawg`. The gear inside the panel writes this |
+| `hiddenBackends` | *(empty)* | Tools the widget ignores entirely: `proton`, `mullvad`, `windscribe`, `warp`, `networkmanager`, `openvpn`, `amneziawg`. The gear inside the panel writes this |
+| `stackConnections` | `false` | Tunnels from different tools stay up together instead of replacing each other. Also the line under the panel header |
+| `openvpnChip` | `false` | NetworkManager's OpenVPN profiles get their own **OpenVPN** chip |
+| `barIcon` | `VPN` | `VPN`, `Shield`, or `WireGuard` (the WireGuard mark) |
+| `profilesDir` | `~/.config/omarchy/vpn/awg-profiles` | Where AmneziaWG profiles are listed from, and imported to |
+| `systemdProfiles` | *(empty)* | AmneziaWG interfaces run as `awg-quick@<name>.service` (configs in `/etc/amnezia/amneziawg`), comma separated |
+| `profileNames` | *(empty)* | Display names for AmneziaWG interfaces: `pc-david=VPS Hong Kong` |
 
 ## Mullvad
 

@@ -119,3 +119,11 @@ test("stackStatus says off, on, or what is stacked", () => {
   eq(both.text, "Stacked · Singapore + lojel-office-gateway-access")
   eq(both.glyph, Shared.GLYPH_LAYERS)
 })
+
+test("installAwgRow runs Omarchy's AUR helper for exactly what is missing", () => {
+  eq(Shared.installAwgRow([], "g"), null)
+  const row = Shared.installAwgRow(["amneziawg-go"], "g")
+  eq(row.command, "omarchy-pkg-aur-add amneziawg-go")
+  eq(row.hidden, undefined)
+  eq(row.option, "installAmneziaWG")
+})

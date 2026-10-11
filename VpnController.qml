@@ -41,6 +41,11 @@ Item {
   // about the machine, so the settings view lists these — including the hidden
   // ones, which would otherwise be unreachable once they were switched off.
   readonly property var detectedBackends: backends.filter(function(backend) { return backend.detected })
+  // What AmneziaWG still needs installed; empty when it is ready, and nothing
+  // is offered for a tool the user has hidden.
+  readonly property var awgMissing: isHidden(amneziaWg.backendId) ? [] : amneziaWg.missingPackages
+  function watchAwgInstall() { amneziaWg.watchInstall() }
+
   readonly property bool stackConnections: setting("stackConnections", false) === true
   readonly property var hiddenBackendIds: Shared.parseBackendIds(setting("hiddenBackends", ""))
   readonly property var availableBackends: detectedBackends.filter(function(backend) {

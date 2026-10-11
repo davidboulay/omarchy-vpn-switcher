@@ -21,7 +21,7 @@ Item {
   // What the `preferredBackend` setting matches, which must not move with the
   // profile list. `label` is what the chip shows (see nmChipLabel).
   property string preferenceLabel: "NetworkManager"
-  readonly property string label: NetworkManager.nmChipLabel(profiles, preferenceLabel)
+  readonly property string label: NetworkManager.nmChipLabel(profiles, preferenceLabel, chipKinds)
   readonly property bool openvpnChip: setting("openvpnChip", false) === true
   // The OpenVPN instance is nothing at all while the setting is off: no probes,
   // no polling, no chip, and no entry under the gear.
@@ -64,17 +64,21 @@ Item {
   readonly property bool _toolsPresent:
     _nmcliPresent && (_openvpnPresent || _wireguardPresent || _openconnectPresent
       || _vpncPresent || _l2tpPresent)
-  // Having the tools is not having anything to connect to. NetworkManager is
-  // the one backend whose list can be legitimately empty on a working install,
-  // and a chip leading to an empty list is a chip worth not drawing.
-  readonly property bool detected: _chipEnabled && _toolsPresent && profiles.length > 0
+  // The kinds this chip can hold, from the tools installed (see nmChipKinds).
+  readonly property var chipKinds: NetworkManager.nmChipKinds(backendId, openvpnChip, {
+    "openvpn": _openvpnPresent,
+    "wireguard": _wireguardPresent,
+    "openconnect": _openconnectPresent,
+    "vpnc": _vpncPresent,
+    "l2tp": _l2tpPresent
+  })
+  // Drawn as soon as a tool for it is installed, with or without a profile:
+  // an empty chip is where the + for the first profile lives. Upstream hid an
+  // empty chip, which left no way to import into it from the panel.
+  readonly property bool detected: _chipEnabled && _nmcliPresent && chipKinds.length > 0
 
-  // Said instead of the panel's "install a VPN tool" line, which is unhelpful
-  // advice for someone who has the tools and only lacks a profile.
-  // The OpenVPN instance never offers it: the NetworkManager chip is the one
-  // that says "import a profile".
-  readonly property string setupHint:
-    backendId === "networkmanager" && _toolsPresent && profiles.length === 0 ? emptyText : ""
+  // A detected chip says this in its own list instead.
+  readonly property string setupHint: ""
   property int _desired: -1
   property var _pendingTarget: null
   // Connecting can take two commands — down the profile that is up, then up the
@@ -101,13 +105,7 @@ Item {
   readonly property string summary: NetworkManager.nmSummary(profiles)
   readonly property var details: NetworkManager.nmDetails(profiles)
   readonly property var targets: NetworkManager.nmTargets(profiles, root.openconnectAuth)
-  readonly property string emptyText: NetworkManager.nmEmptyText({
-    "openvpn": _openvpnPresent,
-    "wireguard": _wireguardPresent,
-    "openconnect": _openconnectPresent,
-    "vpnc": _vpncPresent,
-    "l2tp": _l2tpPresent
-  })
+  readonly property string emptyText: NetworkManager.nmEmptyText(NetworkManager.nmChipTools(chipKinds))
   readonly property string currentKey: {
     var profile = NetworkManager.activeNmProfile(profiles)
     return profile ? "profile:" + profile.uuid : ""

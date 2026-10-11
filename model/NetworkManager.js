@@ -227,7 +227,9 @@ function usernameSetting(profile) {
 // WireGuard tunnels reads "WireGuard", not the name of the daemon behind it.
 // Mixed kinds, or none, keep the manager's name, which is the only honest
 // umbrella for them.
-function nmChipLabel(profiles, fallback) {
+function nmChipLabel(profiles, fallback, kinds) {
+  // An empty chip that can only ever hold one kind is named after it too.
+  if ((profiles || []).length === 0 && (kinds || []).length === 1) return kinds[0]
   var kind = ""
   for (var i = 0; i < (profiles || []).length; i++) {
     var next = nmKindLabel(profiles[i])
@@ -314,13 +316,12 @@ function nmTargets(profiles, authScript) {
 function nmEmptyText(tools) {
   var available = tools || {}
   var ways = []
-
-  if (available.openvpn) {
-    ways.push("nmcli connection import type openvpn file <config.ovpn>")
-  }
-  if (available.wireguard) {
-    ways.push("nmcli connection import type wireguard file <config.conf>")
-  }
+  // OpenVPN and WireGuard files go through the panel's +, not a command:
+  // `nmcli connection import type wireguard` brings the tunnel up the moment it
+  // is stored (see nmWireGuardAddCommand), which is not advice to hand out.
+  var imports = []
+  if (available.openvpn) imports.push("an OpenVPN .ovpn")
+  if (available.wireguard) imports.push("a WireGuard .conf")
   if (available.openconnect) {
     ways.push("nmcli connection add type vpn vpn-type openconnect con-name <name>"
       + " -- vpn.data \"gateway = <host>\"")
@@ -334,8 +335,33 @@ function nmEmptyText(tools) {
       + " -- vpn.data \"gateway = <host>, user = <you>, ipsec-enabled = yes\"")
   }
 
-  if (ways.length === 0) return "No profiles yet."
-  return "No profiles yet. Create one with: " + ways.join(" — or: ")
+  var text = "No profiles yet."
+  if (imports.length > 0) text += " Press + to import " + imports.join(" or ") + " file."
+  if (ways.length > 0) text += " Create one with: " + ways.join(" — or: ")
+  return text
+}
+
+// The tunnel kinds a chip can hold, from the tools on the machine. The OpenVPN
+// chip holds OpenVPN only; the NetworkManager chip holds the rest, and OpenVPN
+// too unless it has its own chip. A chip is drawn as soon as this is
+// non-empty — even with no profile yet — because its + is how the first
+// profile gets in.
+function nmChipKinds(backendId, openvpnChip, tools) {
+  var t = tools || {}
+  if (backendId === "openvpn") return openvpnChip === true && t.openvpn ? ["OpenVPN"] : []
+  var kinds = []
+  if (t.openvpn && openvpnChip !== true) kinds.push("OpenVPN")
+  if (t.wireguard) kinds.push("WireGuard")
+  if (t.openconnect) kinds.push("OpenConnect")
+  if (t.vpnc) kinds.push("VPNC")
+  if (t.l2tp) kinds.push("L2TP")
+  return kinds
+}
+
+// The tools object nmEmptyText reads, limited to what this chip holds.
+function nmChipTools(kinds) {
+  var has = function(k) { return (kinds || []).indexOf(k) !== -1 }
+  return { openvpn: has("OpenVPN"), wireguard: has("WireGuard"), openconnect: has("OpenConnect"), vpnc: has("VPNC"), l2tp: has("L2TP") }
 }
 
 function nmSummary(profiles) {

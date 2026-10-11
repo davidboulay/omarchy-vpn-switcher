@@ -305,8 +305,7 @@ test("nmDetails names a live L2TP tunnel and its gateway", () => {
 
 test("nmEmptyText names only the tools that are installed", () => {
   eq(NetworkManager.nmEmptyText({ openvpn: true, wireguard: true }),
-    "No profiles yet. Create one with: nmcli connection import type openvpn file <config.ovpn>"
-    + " — or: nmcli connection import type wireguard file <config.conf>")
+    "No profiles yet. Press + to import an OpenVPN .ovpn or a WireGuard .conf file.")
 
   // The line used to name OpenVPN and WireGuard on a machine that had neither.
   eq(NetworkManager.nmEmptyText({ l2tp: true }).indexOf("openvpn"), -1)
@@ -433,4 +432,20 @@ test("nmOpenVpnFixupCommand swaps ns-cert-type and turns autoconnect off", () =>
     ["nmcli", "connection", "modify", "uuid", "u", "connection.autoconnect", "no", "-vpn.data", "ns-cert-type", "+vpn.data", "remote-cert-tls=server"])
   eq(NetworkManager.nmOpenVpnFixupCommand("u", "remote-cert-tls = server"),
     ["nmcli", "connection", "modify", "uuid", "u", "connection.autoconnect", "no"])
+})
+
+test("nmChipKinds draws a chip for every installed tool, profiles or not", () => {
+  const all = { openvpn: true, wireguard: true }
+  eq(NetworkManager.nmChipKinds("networkmanager", false, all), ["OpenVPN", "WireGuard"])
+  eq(NetworkManager.nmChipKinds("networkmanager", true, all), ["WireGuard"])
+  eq(NetworkManager.nmChipKinds("openvpn", true, all), ["OpenVPN"])
+  eq(NetworkManager.nmChipKinds("openvpn", false, all), [])
+  eq(NetworkManager.nmChipKinds("openvpn", true, { wireguard: true }), [])
+  eq(NetworkManager.nmChipKinds("networkmanager", true, { openvpn: true }), [])
+})
+
+test("an empty chip that holds one kind is named after it", () => {
+  eq(NetworkManager.nmChipLabel([], "NetworkManager", ["WireGuard"]), "WireGuard")
+  eq(NetworkManager.nmChipLabel([], "NetworkManager", ["OpenVPN", "WireGuard"]), "NetworkManager")
+  eq(NetworkManager.nmEmptyText(NetworkManager.nmChipTools(["OpenVPN"])), "No profiles yet. Press + to import an OpenVPN .ovpn file.")
 })

@@ -500,3 +500,22 @@ function awgImportCommand(path, profilesDir) {
       "sh", String(path), dest, name]
   }
 }
+
+// What to install for AmneziaWG to work, for the panel's install button.
+// `awg` and `awg-quick` come from amneziawg-tools, but they only configure a
+// tunnel: something has to carry it, and NetworkManager cannot. That is either
+// the kernel module (amneziawg-dkms) or the userspace amneziawg-go; the button
+// offers amneziawg-go because it needs no kernel headers and no rebuild on
+// every kernel update. Without an engine, awg-quick fails at connect time with
+// an error that never mentions what is missing.
+function awgMissingPackages(awgPresent, awgQuickPresent, enginePresent) {
+  var missing = []
+  if (!(awgPresent && awgQuickPresent)) missing.push("amneziawg-tools")
+  if (!enginePresent) missing.push("amneziawg-go")
+  return missing
+}
+
+function awgEmptyText(profilesDir, enginePresent) {
+  if (!enginePresent) return "AmneziaWG needs amneziawg-go (or the amneziawg kernel module) to connect. Install it from the gear."
+  return "No profiles yet. Press + to import an AmneziaWG .conf, or drop one in " + profilesDir
+}

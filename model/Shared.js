@@ -182,6 +182,24 @@ function stackStatus(stackConnections, names) {
   return { on: true, stacked: false, glyph: GLYPH_LAYERS, text: "Stacking on · tools can run together" }
 }
 
+// The gear's "Install AmneziaWG" row: a plain row (no `hidden`, so no
+// switch) that runs Omarchy's AUR helper in a terminal when activated.
+var INSTALL_AWG_OPTION = "installAmneziaWG"
+
+function installAwgRow(missing, glyph) {
+  var packages = missing || []
+  if (packages.length === 0) return null
+  return {
+    key: "option:" + INSTALL_AWG_OPTION,
+    option: INSTALL_AWG_OPTION,
+    label: "Install AmneziaWG",
+    detail: "Opens a terminal: " + packages.join(", "),
+    glyph: glyph,
+    packages: packages,
+    command: "omarchy-pkg-aur-add " + packages.join(" ")
+  }
+}
+
 function stackOptionRow(stackConnections, glyph) {
   var on = stackConnections === true
   return {
