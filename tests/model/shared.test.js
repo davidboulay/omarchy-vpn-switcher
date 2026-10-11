@@ -73,3 +73,17 @@ test("parsePublicIp rejects anything that is not one", () => {
   eq(Shared.parsePublicIp(null), "")
   eq(Shared.parsePublicIp("1.2.3.4".padEnd(50, "0")), "")
 })
+
+test("tunnelsToDrop keeps other tools' tunnels only when stacking", () => {
+  eq(Shared.tunnelsToDrop(["a", "b"], false), ["a", "b"])
+  eq(Shared.tunnelsToDrop(["a", "b"], undefined), ["a", "b"])
+  eq(Shared.tunnelsToDrop(["a", "b"], true), [])
+})
+
+test("stackOptionRow drives the provider switch inverted through hidden", () => {
+  const off = Shared.stackOptionRow(false, "g")
+  eq(off.hidden, true)
+  eq(off.option, "stackConnections")
+  eq(off.backendId, undefined)
+  eq(Shared.stackOptionRow(true, "g").hidden, false)
+})

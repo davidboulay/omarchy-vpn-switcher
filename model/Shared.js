@@ -112,6 +112,33 @@ function favoriteCodes(raw) {
 // Which tools the user told the widget to ignore, stored as one comma-separated
 // string so the setting stays hand-editable in shell.json and in Omarchy's own
 // settings dialog, which has no array field.
+// `stackConnections`: whether a connect leaves the other tools' tunnels up.
+// Off (the default) is one tunnel at a time, because two full tunnels fight
+// over the default route. On is for tunnels that do not: an office network
+// carried next to a full tunnel, or a provider chained over another. It only
+// spans tools: a backend still swaps its own profiles, since one tool's two
+// profiles are almost always two exits for the same traffic.
+function tunnelsToDrop(othersConnected, stackConnections) {
+  return stackConnections === true ? [] : othersConnected
+}
+
+// The widget-wide option, drawn under the gear with the provider switches. It
+// reuses the provider row's shape — `hidden` drives the switch, inverted — so
+// the panel needs no row type of its own; `option` is what tells them apart.
+var STACK_OPTION = "stackConnections"
+
+function stackOptionRow(stackConnections, glyph) {
+  var on = stackConnections === true
+  return {
+    key: "option:" + STACK_OPTION,
+    option: STACK_OPTION,
+    label: "Stack connections",
+    detail: on ? "On · tunnels from different tools stay up together" : "Off · one tunnel at a time",
+    glyph: glyph,
+    hidden: !on
+  }
+}
+
 function parseBackendIds(raw) {
   var ids = []
   var parts = String(raw || "").split(",")

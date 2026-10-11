@@ -47,7 +47,7 @@ Panel {
       glyph: entry.glyph,
       hidden: hidden
     }
-  })
+  }).concat(vpn.detectedBackends.length > 0 ? [Shared.stackOptionRow(vpn.stackConnections, Shared.GLYPH_VPN)] : [])
   readonly property var rows: providersOpen ? providerRows : (backend ? backend.targets : [])
   // Tool settings, for the backends that have any. A backend without them
   // simply has no block here.
@@ -286,6 +286,10 @@ Panel {
   }
 
   function toggleProvider(row) {
+    if (row && row.option === Shared.STACK_OPTION) {
+      saveSetting(Shared.STACK_OPTION, !vpn.stackConnections)
+      return
+    }
     if (!row || row.backendId === undefined) return
     var next = Shared.toggleBackendId(vpn.hiddenBackendIds, row.backendId)
     saveSetting("hiddenBackends", Shared.joinBackendIds(next))

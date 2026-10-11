@@ -23,6 +23,7 @@
       "preferredBackend": "Auto",
       "favoriteCountries": "CH,NL,US",
       "hiddenBackends": "",
+      "stackConnections": false,
       "profilesDir": "~/.config/omarchy/vpn/awg-profiles"
     },
     "schema": [
@@ -64,6 +65,13 @@
         "label": "AmneziaWG profile directory",
         "defaultValue": "~/.config/omarchy/vpn/awg-profiles",
         "description": "Where the AmneziaWG chip looks for *.conf profiles. Created with owner-only access if it does not exist."
+      },
+      {
+        "key": "stackConnections",
+        "type": "boolean",
+        "label": "Stack connections",
+        "defaultValue": false,
+        "description": "Off: connecting one VPN disconnects every other one first. On: tunnels from different tools stay up together (each tool still runs one profile at a time). Also a switch under the gear in the panel."
       },
       {
         "key": "hiddenBackends",
