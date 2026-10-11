@@ -87,3 +87,14 @@ test("stackOptionRow drives the provider switch inverted through hidden", () => 
   eq(off.backendId, undefined)
   eq(Shared.stackOptionRow(true, "g").hidden, false)
 })
+
+test("stackStatus says off, on, or what is stacked", () => {
+  eq(Shared.stackStatus(false, ["Singapore", "Office"]).stacked, false)
+  eq(Shared.stackStatus(false, []).on, false)
+  eq(Shared.stackStatus(true, ["Singapore"]).stacked, false)
+  eq(Shared.stackStatus(true, ["Singapore"]).on, true)
+  const both = Shared.stackStatus(true, ["Singapore", "lojel-office-gateway-access"])
+  eq(both.stacked, true)
+  eq(both.text, "Stacked · Singapore + lojel-office-gateway-access")
+  eq(both.glyph, Shared.GLYPH_LAYERS)
+})

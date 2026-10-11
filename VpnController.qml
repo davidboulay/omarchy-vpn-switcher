@@ -92,8 +92,15 @@ Item {
     }
     var backend = connectedBackend
     if (!backend) return "Not connected"
+    if (stackStatus.stacked) return stackStatus.text
     return backend.label + " · " + backend.summary
   }
+
+  // Every tunnel that is up, one per tool. More than one only when stacking.
+  readonly property var connectedNames: availableBackends.filter(function(backend) {
+    return backend.connected
+  }).map(function(backend) { return backend.summary })
+  readonly property var stackStatus: Shared.stackStatus(stackConnections, connectedNames)
 
   readonly property var switcherOptions: availableBackends.map(function(backend) {
     return { value: backend.backendId, label: backend.label }
