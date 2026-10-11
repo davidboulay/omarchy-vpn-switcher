@@ -252,6 +252,10 @@ Item {
   // one up therefore takes every other backend down first, and the new
   // connection waits for them so the tools do not fight over the routes.
   function connectVia(backend, target) {
+    // Picking the tunnel that is already up is not a request to rebuild it:
+    // a reconnect drops every connection running through it, which on a busy
+    // tunnel is an interrupted download or a reply cut off mid-stream.
+    if (Shared.isCurrentTarget(backend, target)) return
     runExclusive(backend, function() { backend.connectTo(target) })
   }
 

@@ -127,3 +127,14 @@ test("installAwgRow runs Omarchy's AUR helper for exactly what is missing", () =
   eq(row.hidden, undefined)
   eq(row.option, "installAmneziaWG")
 })
+
+// Clicking the connected row used to reconnect it, cutting off every
+// connection inside the tunnel (2026-10-10, a Claude reply lost mid-stream).
+test("isCurrentTarget matches only the row that is connected now", () => {
+  const up = { connected: true, currentKey: "profile:abc" }
+  eq(Shared.isCurrentTarget(up, { key: "profile:abc" }), true)
+  eq(Shared.isCurrentTarget(up, { key: "profile:def" }), false)
+  eq(Shared.isCurrentTarget({ connected: false, currentKey: "profile:abc" }, { key: "profile:abc" }), false)
+  eq(Shared.isCurrentTarget({ connected: true, currentKey: "" }, { key: "" }), false)
+  eq(Shared.isCurrentTarget(null, { key: "profile:abc" }), false)
+})

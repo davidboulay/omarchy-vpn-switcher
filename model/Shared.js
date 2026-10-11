@@ -256,3 +256,12 @@ function toggleBackendId(ids, id) {
   if (!found) next.push(id)
   return next
 }
+
+// Whether a picked row is the tunnel that is already up. The controller skips
+// connecting to it, because every backend's connectTo would tear the tunnel
+// down and bring it back, dropping the connections inside it.
+function isCurrentTarget(backend, target) {
+  if (!backend || !target || backend.connected !== true) return false
+  var current = String(backend.currentKey || "")
+  return current !== "" && String(target.key || "") === current
+}
