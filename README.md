@@ -14,7 +14,7 @@ It supports **Proton VPN**, **Mullvad**, **Windscribe**, **Cloudflare WARP**,
 to offer appear — install none and the widget tells you so; have several and a
 chip row lets you switch between them.
 
-<img src="preview.png" alt="The VPN panel open in the Omarchy bar, showing a Proton VPN connection to Zurich and a country list" width="365">
+<img src="preview.png" alt="The VPN Switcher panel: two tunnels stacked (Japan over WireGuard and Singapore AI only over OpenVPN), with WireGuard, OpenVPN and AmneziaWG chips and a + to import a profile" width="365">
 
 Each installed tool gets its own chip and its own view — Proton VPN above,
 [Mullvad](#mullvad), [Windscribe](#windscribe), [AmneziaWG](#amneziawg) and
