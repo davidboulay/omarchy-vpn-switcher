@@ -159,6 +159,44 @@ function awgUnitFor(name) {
   return "awg-quick@" + name + ".service"
 }
 
+// The `profileNames` setting: "pc-david=VPS Hong Kong, work=Office". A profile
+// is named after its config file because awg-quick derives the interface from
+// it, and an interface name allows no spaces and 15 characters at most — so a
+// readable name has to live beside the file rather than in it. Renaming the
+// file would also rename the interface, its systemd unit and anything (a
+// polkit rule) keyed to either. Entries without an "=" or with an empty side
+// are dropped; the first entry for an interface wins.
+function parseAwgProfileNames(raw) {
+  var names = {}
+  var parts = String(raw || "").split(",")
+  for (var i = 0; i < parts.length; i++) {
+    var at = parts[i].indexOf("=")
+    if (at < 0) continue
+    var iface = parts[i].substring(0, at).trim()
+    var shown = parts[i].substring(at + 1).trim()
+    if (iface === "" || shown === "" || names[iface] !== undefined) continue
+    names[iface] = shown
+  }
+  return names
+}
+
+// Copies, so a profile list the backend already published is never changed
+// under a binding that read it.
+function awgApplyNames(profiles, names) {
+  var named = []
+  for (var i = 0; i < profiles.length; i++) {
+    var copy = {}
+    for (var key in profiles[i]) copy[key] = profiles[i][key]
+    if (names && names[copy.name] !== undefined) copy.label = names[copy.name]
+    named.push(copy)
+  }
+  return named
+}
+
+function awgLabel(profile) {
+  return profile.label ? profile.label : profile.name
+}
+
 // The profile list the panel renders: every config found, one row per
 // systemd-managed profile the listing could not read, and one synthesized row
 // per interface that is up and has no config behind it.
@@ -326,7 +364,10 @@ function awgTargets(profiles) {
     else if (profile.unit) detailText = "AmneziaWG profile · systemd unit"
     targets.push({
       key: "profile:" + profile.name,
-      label: profile.name,
+      label: awgLabel(profile),
+      // The interface name, which the label no longer is once profileNames
+      // renames it: anything that needs a file or unit reads this.
+      name: profile.name,
       detail: detailText,
       glyph: profile.hasHooks ? Shared.GLYPH_SHIELD_LOCK : Shared.GLYPH_SHIELD,
       confFile: profile.confFile,
@@ -347,7 +388,7 @@ function awgTargets(profiles) {
 
 function awgSummary(profiles) {
   for (var i = 0; i < profiles.length; i++) {
-    if (profiles[i].active) return profiles[i].name
+    if (profiles[i].active) return awgLabel(profiles[i])
   }
   return profiles.length === 0 ? "No profiles" : "Not connected"
 }
@@ -359,7 +400,7 @@ function awgDetails(profiles, healthByInterface) {
     if (!profile.active) continue
     var iface = interfaceFor(profile.confFile)
     var health = healthByInterface ? healthByInterface[iface] : null
-    rows.push(Shared.detail("Profile", profile.name))
+    rows.push(Shared.detail("Profile", awgLabel(profile)))
     rows.push(Shared.detail("Interface", iface))
     // An externally started tunnel, like most systemd-managed ones, has a config
     // this widget never read, so the rows that come from one are left out
@@ -423,7 +464,7 @@ function awgEditCommand(target, defaultEditor, rootEditHelper) {
     && path.indexOf(AWG_SYSTEM_PROFILE_DIR + "/") !== 0
   if (userFile) return { argv: ["omarchy-launch-editor", path], terminal: false }
   if (path.indexOf("/") !== 0) {
-    var name = String(target.label || path)
+    var name = String(target.name || target.label || path)
     if (!/^[a-zA-Z0-9_=+.-]{1,15}$/.test(name)) return null
     path = AWG_SYSTEM_PROFILE_DIR + "/" + name + ".conf"
   }

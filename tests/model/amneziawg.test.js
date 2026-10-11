@@ -378,3 +378,28 @@ test("awgBlockingEditor makes the default editor block until the file is closed"
   eq(AmneziaWg.awgBlockingEditor("gnome-text-editor"), { argv: ["nvim"], terminal: true })
   eq(AmneziaWg.awgBlockingEditor(""), { argv: ["nvim"], terminal: true })
 })
+
+test("parseAwgProfileNames reads interface=Name pairs", () => {
+  eq(AmneziaWg.parseAwgProfileNames("pc-david=VPS Hong Kong, work = Office ,bad, =x, y=, work=Again"),
+    { "pc-david": "VPS Hong Kong", work: "Office" })
+  eq(AmneziaWg.parseAwgProfileNames(""), {})
+})
+
+test("a named profile shows its name everywhere a person reads it", () => {
+  const built = [{ name: "pc-david", confFile: "/etc/amnezia/amneziawg/pc-david.conf", active: true, unit: "awg-quick@pc-david.service" }]
+  const named = AmneziaWg.awgApplyNames(built, { "pc-david": "VPS Hong Kong" })
+  eq(built[0].label, undefined)
+  eq(named[0].name, "pc-david")
+  eq(AmneziaWg.awgTargets(named)[0].label, "VPS Hong Kong")
+  eq(AmneziaWg.awgTargets(named)[0].key, "profile:pc-david")
+  eq(AmneziaWg.awgSummary(named), "VPS Hong Kong")
+  eq(AmneziaWg.awgTargets(AmneziaWg.awgApplyNames(built, {}))[0].label, "pc-david")
+})
+
+test("a renamed root-owned profile still edits its own config", () => {
+  const named = AmneziaWg.awgApplyNames(AmneziaWg.buildProfiles([], ["pc-david"]), { "pc-david": "VPS Hong Kong" })
+  const target = AmneziaWg.awgTargets(named)[0]
+  eq(target.label, "VPS Hong Kong")
+  eq(AmneziaWg.awgEditCommand(target, "nvim", "/p/bin/omarchy-vpn-root-edit").argv.slice(0, 2),
+    ["/p/bin/omarchy-vpn-root-edit", "/etc/amnezia/amneziawg/pc-david.conf"])
+})

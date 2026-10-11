@@ -26,7 +26,8 @@
       "openvpnChip": false,
       "profilesDir": "~/.config/omarchy/vpn/awg-profiles",
       "systemdProfiles": "",
-      "barIcon": "VPN"
+      "barIcon": "VPN",
+      "profileNames": ""
     },
     "schema": [
       {
@@ -94,6 +95,13 @@
         "label": "Give OpenVPN its own chip",
         "defaultValue": false,
         "description": "Lists NetworkManager's OpenVPN profiles under an OpenVPN chip instead of the NetworkManager one. Useful when a provider's OpenVPN servers would otherwise be mixed in with your WireGuard tunnels."
+      },
+      {
+        "key": "profileNames",
+        "type": "string",
+        "label": "AmneziaWG profile names (comma separated)",
+        "defaultValue": "",
+        "description": "Names to show instead of the interface name, as interface=Name: \"pc-david=VPS Hong Kong\". The config file, interface and systemd unit keep their names."
       },
       {
         "key": "hiddenBackends",
