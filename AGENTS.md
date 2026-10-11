@@ -32,7 +32,7 @@ Lint one QML file per invocation, from the parent directory (run inside the
 plugin directory, `Panel.qml` resolves to itself and exits 255 silently):
 
 ```bash
-cd .. && qmllint -I /usr/share/omarchy/shell jkoestinger.vpn/MullvadBackend.qml
+cd .. && qmllint -I /usr/share/omarchy/shell davidboulay.vpn-switcher/MullvadBackend.qml
 ```
 
 ## Rules
@@ -49,8 +49,8 @@ cd .. && qmllint -I /usr/share/omarchy/shell jkoestinger.vpn/MullvadBackend.qml
   workaround writes down what the CLI actually does.
 - **A fixed parser gets the case that broke it**, real CLI output pasted
   verbatim.
-- **Pull requests target `dev`.** `CHANGELOG.md` and the `manifest.json` version
-  belong to release-please.
+- **Pull requests target `main`.** A release bumps the `manifest.json` version
+  and adds its `CHANGELOG.md` section in the same commit.
 
 ## Agent skills
 

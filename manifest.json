@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "id": "jkoestinger.vpn",
-  "name": "VPN",
-  "version": "1.5.0",
-  "author": "Justin",
+  "id": "davidboulay.vpn-switcher",
+  "name": "VPN Switcher",
+  "version": "1.0.0",
+  "author": "David Boulay",
   "license": "MIT",
-  "description": "VPN status and switching in the Omarchy bar, across whichever VPN tools are installed.",
+  "description": "VPN status and switching in the Omarchy bar: Proton VPN, Mullvad, Windscribe, Cloudflare WARP, AmneziaWG and NetworkManager OpenVPN/WireGuard, with stacking, profile import and exit location.",
   "kinds": [
     "bar-widget"
   ],
@@ -13,7 +13,7 @@
     "barWidget": "Panel.qml"
   },
   "barWidget": {
-    "displayName": "VPN",
+    "displayName": "VPN Switcher",
     "description": "Detects installed VPN tools (Proton VPN, Mullvad, Windscribe, AmneziaWG, Cloudflare WARP, and NetworkManager's OpenVPN, WireGuard, OpenConnect, VPNC and L2TP/IPsec profiles) and switches between them from one bar icon.",
     "category": "Network",
     "allowMultiple": false,

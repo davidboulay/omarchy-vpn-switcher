@@ -548,7 +548,7 @@ engine. The suite covers them:
 
 ```bash
 node tests/run.js
-(cd .. && qmllint -I /usr/share/omarchy/shell jkoestinger.vpn/Panel.qml)
+(cd .. && qmllint -I /usr/share/omarchy/shell davidboulay.vpn-switcher/Panel.qml)
 ```
 
 One file per invocation, and never from inside the plugin directory. qmllint

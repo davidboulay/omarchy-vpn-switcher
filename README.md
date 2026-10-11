@@ -1,8 +1,12 @@
-# omarchy-vpn
+# VPN Switcher
 
-A VPN widget for the Omarchy bar. One icon shows whether you are behind a
-tunnel; one panel connects, disconnects, and switches between the VPN tools you
-actually have installed.
+One bar icon for every VPN on an Omarchy machine. It shows whether you are
+behind a tunnel, and one panel connects, disconnects, stacks and switches
+between the VPN tools you actually have installed.
+
+Based on [jkoestinger/omarchy-vpn](https://github.com/jkoestinger/omarchy-vpn)
+(MIT), extended with tunnel stacking, profile import, exit location, a separate
+OpenVPN chip, AmneziaWG systemd profiles and display names, and profile editing.
 
 It supports **Proton VPN**, **Mullvad**, **Windscribe**, **Cloudflare WARP**,
 **AmneziaWG**, and the **OpenVPN**, **WireGuard**, **OpenConnect**, **VPNC** and
@@ -19,8 +23,8 @@ Each installed tool gets its own chip and its own view — Proton VPN above,
 ## Install
 
 ```bash
-omarchy plugin add https://github.com/jkoestinger/omarchy-vpn.git
-omarchy plugin enable jkoestinger.vpn
+omarchy plugin add https://github.com/davidboulay/omarchy-vpn-switcher.git
+omarchy plugin enable davidboulay.vpn-switcher
 ```
 
 Plugins land disabled so you can read the code before it runs — it runs
@@ -28,11 +32,11 @@ unsandboxed inside `omarchy-shell`, like every Omarchy plugin. **Setup ›
 Plugins** does the same thing from the menu.
 
 The icon appears at the right end of the bar. Move it with
-`omarchy bar move jkoestinger.vpn --before omarchy.clock`, or any other
+`omarchy bar move davidboulay.vpn-switcher --before omarchy.clock`, or any other
 placement.
 
 To update later: `omarchy plugin update`. To remove:
-`omarchy plugin remove jkoestinger.vpn`.
+`omarchy plugin remove davidboulay.vpn-switcher`.
 
 ## Using it
 
@@ -112,8 +116,10 @@ Omarchy with its Quickshell desktop, plus at least one of:
 - **Cloudflare WARP** — `warp-cli` with `warp-svc` running, the device
   registered (`warp-cli registration new`), and WARP's terms accepted once in a
   terminal.
-- **AmneziaWG** — `awg` and `awg-quick` from `amneziawg-tools`, with at least
-  one `.conf` profile in `~/.config/omarchy/vpn/awg-profiles/`.
+- **AmneziaWG** — `awg` and `awg-quick` from `amneziawg-tools`, **plus an
+  engine to carry the traffic**: `amneziawg-go` (userspace) or the kernel module
+  (`amneziawg-dkms`). NetworkManager cannot run AmneziaWG. The widget checks for
+  both, and offers an install button under the gear when something is missing.
 - **OpenVPN, WireGuard, OpenConnect, VPNC or L2TP/IPsec** — `nmcli`, plus
   `openvpn`, `wg` (wireguard-tools), `networkmanager-openconnect`,
   `networkmanager-vpnc`, or `networkmanager-l2tp`, with at least one profile
@@ -404,15 +410,15 @@ The widget answers on the shell's IPC bus, so keybindings and scripts can drive
 it:
 
 ```bash
-omarchy-shell jkoestinger.vpn status       # "Proton VPN · CH#1129 · Zurich, Switzerland"
-omarchy-shell jkoestinger.vpn ip           # current public address
-omarchy-shell jkoestinger.vpn backends     # "proton mullvad windscribe warp networkmanager amneziawg"
-omarchy-shell jkoestinger.vpn use mullvad  # switch the panel's active tool
-omarchy-shell jkoestinger.vpn connect CH   # country code, region or profile name, or row key
-omarchy-shell jkoestinger.vpn quickconnect # each tool's default connection
-omarchy-shell jkoestinger.vpn disconnect
-omarchy-shell jkoestinger.vpn setup        # run the setup hint's command in a terminal
-omarchy-shell jkoestinger.vpn toggle       # open or close the panel
+omarchy-shell davidboulay.vpn-switcher status       # "Proton VPN · CH#1129 · Zurich, Switzerland"
+omarchy-shell davidboulay.vpn-switcher ip           # current public address
+omarchy-shell davidboulay.vpn-switcher backends     # "proton mullvad windscribe warp networkmanager amneziawg"
+omarchy-shell davidboulay.vpn-switcher use mullvad  # switch the panel's active tool
+omarchy-shell davidboulay.vpn-switcher connect CH   # country code, region or profile name, or row key
+omarchy-shell davidboulay.vpn-switcher quickconnect # each tool's default connection
+omarchy-shell davidboulay.vpn-switcher disconnect
+omarchy-shell davidboulay.vpn-switcher setup        # run the setup hint's command in a terminal
+omarchy-shell davidboulay.vpn-switcher toggle       # open or close the panel
 ```
 
 ## Contributing
@@ -424,4 +430,6 @@ together and why.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). Original work © Justin Köstinger
+([omarchy-vpn](https://github.com/jkoestinger/omarchy-vpn)); extensions ©
+David Boulay.

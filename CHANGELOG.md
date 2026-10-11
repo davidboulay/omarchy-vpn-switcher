@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.0 (2026-10-11)
+
+First release as **VPN Switcher** (`davidboulay.vpn-switcher`), a standalone
+plugin based on [jkoestinger/omarchy-vpn](https://github.com/jkoestinger/omarchy-vpn)
+1.5.0 (MIT). Everything below this section is that project's history.
+
+### Added
+
+* AmneziaWG tunnels run as `awg-quick@<name>.service` are listed while down and driven through systemd (`systemdProfiles`), so a polkit rule connects them without a prompt
+* `barIcon` setting: VPN, Shield or the WireGuard mark
+* Edit a profile from the panel (pencil or `e`); root-owned AmneziaWG configs go through a polkit helper, never a root editor
+* OpenVPN profiles can get their own chip (`openvpnChip`); a NetworkManager chip holding one kind of tunnel is named after it ("WireGuard")
+* Display names for AmneziaWG profiles (`profileNames`, e.g. `pc-david=VPS Hong Kong`)
+* **Stack connections**: tunnels from different tools can stay up together; a line under the header shows the state and flips it
+* **Import a profile** with the + on a tool's name row: OpenVPN `.ovpn`, WireGuard `.conf` (created with autoconnect off, never activated), AmneziaWG `.conf`
+* The public IP shows its city and country on a second line, and in the bar tooltip
+
+## Upstream history (jkoestinger/omarchy-vpn)
+
 ## [1.5.0](https://github.com/jkoestinger/omarchy-vpn/compare/v1.4.1...v1.5.0) (2026-09-19)
 
 

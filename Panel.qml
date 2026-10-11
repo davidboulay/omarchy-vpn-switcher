@@ -9,8 +9,8 @@ import "model/Shared.js" as Shared
 
 Panel {
   id: root
-  moduleName: "jkoestinger.vpn"
-  ipcTarget: "jkoestinger.vpn"
+  moduleName: "davidboulay.vpn-switcher"
+  ipcTarget: "davidboulay.vpn-switcher"
   manageIpc: false
 
   // "switcher" | "header" | "hero" | "toggles" | "rows"

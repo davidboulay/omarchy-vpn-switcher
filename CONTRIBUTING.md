@@ -11,8 +11,8 @@ The plugin runs from wherever Omarchy looks for plugins, so the working copy
 *is* the installation:
 
 ```bash
-git clone git@github.com:jkoestinger/omarchy-vpn.git \
-  ~/.config/omarchy/plugins/jkoestinger.vpn
+git clone git@github.com:davidboulay/omarchy-vpn-switcher.git \
+  ~/.config/omarchy/plugins/davidboulay.vpn-switcher
 omarchy restart shell
 ```
 
@@ -46,7 +46,7 @@ test is worth more than a tidied-up version of it.
 Backend `.qml` files can be checked with:
 
 ```bash
-cd .. && qmllint -I /usr/share/omarchy/shell jkoestinger.vpn/MullvadBackend.qml
+cd .. && qmllint -I /usr/share/omarchy/shell davidboulay.vpn-switcher/MullvadBackend.qml
 ```
 
 One file per invocation, and never from inside the plugin directory —
@@ -93,17 +93,16 @@ coming back to life*, not *fix bug in controller*. Put the reasoning in the body
 — it is not extracted into the changelog, and it is the part worth having in six
 months.
 
-Do not edit `CHANGELOG.md` or the version in `manifest.json`. Both are written
-by release automation, and a hand-edit is overwritten on the next release.
+Add a line to `CHANGELOG.md` under the next version with your change.
 
 ## Branches and pull requests
 
-`dev` is the working branch. **Open pull requests against `dev`, not `main`** —
-`main` is the distribution branch, so whatever lands there is what everyone is
-running, and it only ever moves at release time.
+`main` is the working and distribution branch: what lands there is what
+`omarchy plugin update` installs. Work on a branch and open a pull request
+against `main`.
 
 ```bash
-git switch dev && git pull
+git switch main && git pull
 git switch -c my-change
 ```
 
@@ -112,17 +111,8 @@ run the widget with your change in it. A VPN widget that reports a tunnel it
 does not have is worse than one that reports nothing, so a screenshot of the
 panel in the state you changed is genuinely useful in the description.
 
-Claude Code reviews the pull request as well, against the backend contract in
-ARCHITECTURE.md rather than against generic style, and leaves inline comments.
-It is a reviewer, not a gate — nothing it says blocks a merge, and it is wrong
-often enough that disagreeing with it in a reply is a normal outcome. It does
-not run on pull requests from forks, because those get no access to the token it
-needs.
-
-Releases are cut by release-please: merging to `dev` updates a standing release
-pull request, and merging that tags the version and opens the promotion pull
-request onto `main`. Contributors do not need to do anything about this beyond
-writing commit messages in the format above.
+Releases: bump `version` in `manifest.json` and add the `CHANGELOG.md` section
+in the same commit.
 
 ## Style
 
