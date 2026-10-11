@@ -189,8 +189,10 @@ Item {
   // interface name awg-quick derives from the basename — and an up interface
   // with no config behind it still gets a row, so it can be taken down. See
   // AmneziaWg.buildProfiles for why that case is not theoretical.
+  readonly property var profileNames: AmneziaWg.parseAwgProfileNames(root.setting("profileNames", ""))
+
   function applyProfiles(entries) {
-    var list = AmneziaWg.buildProfiles(entries, root.upInterfaces)
+    var list = AmneziaWg.awgApplyNames(AmneziaWg.buildProfiles(entries, root.upInterfaces), root.profileNames)
     root.profiles = list
     if (_desired !== -1 && (AmneziaWg.activeAwgProfile(list) !== null) === (_desired === 1)) _desired = -1
   }

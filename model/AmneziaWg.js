@@ -146,6 +146,44 @@ function interfaceFor(confFile) {
 // see a profile is stale, not proof the tunnel ended. awg-quick resolves a bare
 // interface name against its own directory, so `awg-quick down work` takes it
 // down without the widget ever having read the file.
+// The `profileNames` setting: "pc-david=VPS Hong Kong, work=Office". A profile
+// is named after its config file because awg-quick derives the interface from
+// it, and an interface name allows no spaces and 15 characters at most — so a
+// readable name has to live beside the file rather than in it. Renaming the
+// file would also rename the interface, its systemd unit and anything (a
+// polkit rule) keyed to either. Entries without an "=" or with an empty side
+// are dropped; the first entry for an interface wins.
+function parseAwgProfileNames(raw) {
+  var names = {}
+  var parts = String(raw || "").split(",")
+  for (var i = 0; i < parts.length; i++) {
+    var at = parts[i].indexOf("=")
+    if (at < 0) continue
+    var iface = parts[i].substring(0, at).trim()
+    var shown = parts[i].substring(at + 1).trim()
+    if (iface === "" || shown === "" || names[iface] !== undefined) continue
+    names[iface] = shown
+  }
+  return names
+}
+
+// Copies, so a profile list the backend already published is never changed
+// under a binding that read it.
+function awgApplyNames(profiles, names) {
+  var named = []
+  for (var i = 0; i < profiles.length; i++) {
+    var copy = {}
+    for (var key in profiles[i]) copy[key] = profiles[i][key]
+    if (names && names[copy.name] !== undefined) copy.label = names[copy.name]
+    named.push(copy)
+  }
+  return named
+}
+
+function awgLabel(profile) {
+  return profile.label ? profile.label : profile.name
+}
+
 function buildProfiles(entries, upInterfaces) {
   var up = upInterfaces || []
   var profiles = []
@@ -251,7 +289,7 @@ function awgTargets(profiles) {
     else if (profile.active) detailText = "Connected"
     targets.push({
       key: "profile:" + profile.name,
-      label: profile.name,
+      label: awgLabel(profile),
       detail: detailText,
       glyph: profile.hasHooks ? Shared.GLYPH_SHIELD_LOCK : Shared.GLYPH_SHIELD,
       confFile: profile.confFile,
@@ -268,7 +306,7 @@ function awgTargets(profiles) {
 
 function awgSummary(profiles) {
   for (var i = 0; i < profiles.length; i++) {
-    if (profiles[i].active) return profiles[i].name
+    if (profiles[i].active) return awgLabel(profiles[i])
   }
   return profiles.length === 0 ? "No profiles" : "Not connected"
 }
@@ -280,7 +318,7 @@ function awgDetails(profiles, healthByInterface) {
     if (!profile.active) continue
     var iface = interfaceFor(profile.confFile)
     var health = healthByInterface ? healthByInterface[iface] : null
-    rows.push(Shared.detail("Profile", profile.name))
+    rows.push(Shared.detail("Profile", awgLabel(profile)))
     rows.push(Shared.detail("Interface", iface))
     // An externally started tunnel has a config this widget never read, so the
     // rows that come from one are left out rather than guessed at.

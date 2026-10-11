@@ -23,7 +23,8 @@
       "preferredBackend": "Auto",
       "favoriteCountries": "CH,NL,US",
       "hiddenBackends": "",
-      "profilesDir": "~/.config/omarchy/vpn/awg-profiles"
+      "profilesDir": "~/.config/omarchy/vpn/awg-profiles",
+      "profileNames": ""
     },
     "schema": [
       {
@@ -64,6 +65,13 @@
         "label": "AmneziaWG profile directory",
         "defaultValue": "~/.config/omarchy/vpn/awg-profiles",
         "description": "Where the AmneziaWG chip looks for *.conf profiles. Created with owner-only access if it does not exist."
+      },
+      {
+        "key": "profileNames",
+        "type": "string",
+        "label": "AmneziaWG profile names (comma separated)",
+        "defaultValue": "",
+        "description": "Names to show instead of the interface name, as interface=Name: \"pc-david=VPS Hong Kong\". The config file, interface and systemd unit keep their names."
       },
       {
         "key": "hiddenBackends",
