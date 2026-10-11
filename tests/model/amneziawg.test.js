@@ -256,3 +256,12 @@ test("activeAwgProfile finds the connected profile or null", () => {
   eq(AmneziaWg.activeAwgProfile([{ name: "a", active: false }, { name: "b", active: true }]).name, "b")
   eq(AmneziaWg.activeAwgProfile([{ name: "a", active: false }]), null)
 })
+
+test("awgImportCommand copies into the profile directory under the interface name", () => {
+  const spec = AmneziaWg.awgImportCommand("/home/u/Downloads/hk-2.conf", "/home/u/.config/omarchy/vpn/awg-profiles")
+  eq(spec.name, "hk-2")
+  eq(spec.argv.slice(-3), ["/home/u/Downloads/hk-2.conf", "/home/u/.config/omarchy/vpn/awg-profiles/hk-2.conf", "hk-2"])
+  eq(typeof AmneziaWg.awgImportCommand("/d/wg0 (5).conf", "/p").error, "string")
+  eq(typeof AmneziaWg.awgImportCommand("/d/a.ovpn", "/p").error, "string")
+  eq(typeof AmneziaWg.awgImportCommand("/d/a.conf", "").error, "string")
+})

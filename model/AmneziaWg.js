@@ -307,3 +307,28 @@ function activeAwgProfile(profiles) {
   }
   return null
 }
+
+// The panel's "+": copy the picked file into the profile directory, where the
+// listing finds it on the next poll. Its basename becomes the interface name,
+// so it has to be one: 15 characters of [A-Za-z0-9_=+.-]. The copy is
+// owner-only (it holds a private key), and never replaces a profile that
+// already has the name. Hooks are not checked here: the listing already shows
+// a hooked profile as blocked, which is also how its hooks get edited out.
+function awgImportCommand(path, profilesDir) {
+  var base = String(path || "").split("/").pop()
+  if (!/\.conf$/i.test(base)) return { error: "Pick an AmneziaWG .conf file." }
+  var name = base.replace(/\.conf$/i, "")
+  if (!/^[a-zA-Z0-9_=+.-]{1,15}$/.test(name)) {
+    return { error: "\"" + name + "\" is not a usable interface name (15 characters, no spaces). Rename the file first." }
+  }
+  var dir = String(profilesDir || "")
+  if (dir === "") return { error: "No profile directory set." }
+  var dest = dir + "/" + name + ".conf"
+  return {
+    name: name,
+    argv: ["sh", "-c",
+      "test -e \"$2\" && { echo \"A profile named $3 already exists\" >&2; exit 17; }; " +
+      "mkdir -m 0700 -p \"$(dirname \"$2\")\" && install -m 0600 \"$1\" \"$2\"",
+      "sh", String(path), dest, name]
+  }
+}
