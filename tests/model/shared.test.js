@@ -84,3 +84,17 @@ test("barIconGlyph maps the setting to a glyph, empty for the drawn mark", () =>
   eq(Shared.barIconGlyph(undefined), Shared.GLYPH_VPN)
   eq(Shared.barIconGlyph("wireguard"), Shared.GLYPH_VPN)
 })
+
+test("tunnelsToDrop keeps other tools' tunnels only when stacking", () => {
+  eq(Shared.tunnelsToDrop(["a", "b"], false), ["a", "b"])
+  eq(Shared.tunnelsToDrop(["a", "b"], undefined), ["a", "b"])
+  eq(Shared.tunnelsToDrop(["a", "b"], true), [])
+})
+
+test("stackOptionRow drives the provider switch inverted through hidden", () => {
+  const off = Shared.stackOptionRow(false, "g")
+  eq(off.hidden, true)
+  eq(off.option, "stackConnections")
+  eq(off.backendId, undefined)
+  eq(Shared.stackOptionRow(true, "g").hidden, false)
+})

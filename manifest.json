@@ -23,6 +23,7 @@
       "preferredBackend": "Auto",
       "favoriteCountries": "CH,NL,US",
       "hiddenBackends": "",
+      "stackConnections": false,
       "openvpnChip": false,
       "profilesDir": "~/.config/omarchy/vpn/awg-profiles",
       "systemdProfiles": "",
@@ -102,6 +103,13 @@
         "label": "AmneziaWG profile names (comma separated)",
         "defaultValue": "",
         "description": "Names to show instead of the interface name, as interface=Name: \"pc-david=VPS Hong Kong\". The config file, interface and systemd unit keep their names."
+      },
+      {
+        "key": "stackConnections",
+        "type": "boolean",
+        "label": "Stack connections",
+        "defaultValue": false,
+        "description": "Off: connecting one VPN disconnects every other one first. On: tunnels from different tools stay up together (each tool still runs one profile at a time). Also a switch under the gear in the panel."
       },
       {
         "key": "hiddenBackends",

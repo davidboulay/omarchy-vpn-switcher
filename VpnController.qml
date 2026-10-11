@@ -41,6 +41,7 @@ Item {
   // about the machine, so the settings view lists these — including the hidden
   // ones, which would otherwise be unreachable once they were switched off.
   readonly property var detectedBackends: backends.filter(function(backend) { return backend.detected })
+  readonly property bool stackConnections: setting("stackConnections", false) === true
   readonly property var hiddenBackendIds: Shared.parseBackendIds(setting("hiddenBackends", ""))
   readonly property var availableBackends: detectedBackends.filter(function(backend) {
     return !root.isHidden(backend.backendId)
@@ -266,7 +267,7 @@ Item {
   function runExclusive(backend, action) {
     clearNotice()
 
-    var others = otherConnected(backend)
+    var others = Shared.tunnelsToDrop(otherConnected(backend), stackConnections)
     if (others.length === 0) {
       // Nothing to wait for — but something queued behind an earlier teardown
       // may still be waiting, and it is the request this one replaces. Running
