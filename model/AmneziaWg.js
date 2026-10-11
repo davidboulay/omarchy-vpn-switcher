@@ -133,8 +133,73 @@ function interfaceFor(confFile) {
   return base.replace(/\.conf$/i, "")
 }
 
-// The profile list the panel renders: every config found, plus one synthesized
-// row per interface that is up and has no config behind it.
+// The `systemdProfiles` setting: interface names whose tunnel is owned by
+// amneziawg-tools' `awg-quick@<name>.service` rather than by a bare awg-quick.
+// The setting is the only way to learn them. Their configs live in
+// /etc/amnezia/amneziawg, which is not even listable by the user the shell runs
+// as, and `systemctl list-units` forgets an instance soon after it stops, so
+// neither can say which tunnels exist while they are down.
+//
+// Every name ends up inside a unit name passed to systemctl, so anything that
+// is not a valid awg-quick interface name is dropped here rather than escaped.
+// The pattern and the 15-character limit are awg-quick's own (inherited from
+// wg-quick), so nothing it would accept is lost.
+function parseAwgUnitProfiles(raw) {
+  var names = []
+  var parts = String(raw || "").split(/[\s,]+/)
+  for (var i = 0; i < parts.length; i++) {
+    var name = parts[i].trim()
+    if (!/^[a-zA-Z0-9_=+.-]{1,15}$/.test(name)) continue
+    if (names.indexOf(name) < 0) names.push(name)
+  }
+  return names
+}
+
+function awgUnitFor(name) {
+  return "awg-quick@" + name + ".service"
+}
+
+// The `profileNames` setting: "pc-david=VPS Hong Kong, work=Office". A profile
+// is named after its config file because awg-quick derives the interface from
+// it, and an interface name allows no spaces and 15 characters at most — so a
+// readable name has to live beside the file rather than in it. Renaming the
+// file would also rename the interface, its systemd unit and anything (a
+// polkit rule) keyed to either. Entries without an "=" or with an empty side
+// are dropped; the first entry for an interface wins.
+function parseAwgProfileNames(raw) {
+  var names = {}
+  var parts = String(raw || "").split(",")
+  for (var i = 0; i < parts.length; i++) {
+    var at = parts[i].indexOf("=")
+    if (at < 0) continue
+    var iface = parts[i].substring(0, at).trim()
+    var shown = parts[i].substring(at + 1).trim()
+    if (iface === "" || shown === "" || names[iface] !== undefined) continue
+    names[iface] = shown
+  }
+  return names
+}
+
+// Copies, so a profile list the backend already published is never changed
+// under a binding that read it.
+function awgApplyNames(profiles, names) {
+  var named = []
+  for (var i = 0; i < profiles.length; i++) {
+    var copy = {}
+    for (var key in profiles[i]) copy[key] = profiles[i][key]
+    if (names && names[copy.name] !== undefined) copy.label = names[copy.name]
+    named.push(copy)
+  }
+  return named
+}
+
+function awgLabel(profile) {
+  return profile.label ? profile.label : profile.name
+}
+
+// The profile list the panel renders: every config found, one row per
+// systemd-managed profile the listing could not read, and one synthesized row
+// per interface that is up and has no config behind it.
 //
 // That second half matters more than it looks. awg-quick's own profile
 // directory is /etc/amnezia/amneziawg, root-owned and unreadable to the user
@@ -146,8 +211,15 @@ function interfaceFor(confFile) {
 // see a profile is stale, not proof the tunnel ended. awg-quick resolves a bare
 // interface name against its own directory, so `awg-quick down work` takes it
 // down without the widget ever having read the file.
-function buildProfiles(entries, upInterfaces) {
+//
+// A profile named in `units` carries `unit`, which switches its connect and
+// disconnect over to systemctl (see awgControlCommand). A unit profile is never
+// `external`: the user named it, so it is a profile they expect to start from
+// here, up or down. Its config is usually unreadable, which `configRead`
+// records so the detail rows leave out what only the config could say.
+function buildProfiles(entries, upInterfaces, units) {
   var up = upInterfaces || []
+  var managed = units || []
   var profiles = []
   var seen = {}
   for (var i = 0; i < entries.length; i++) {
@@ -157,11 +229,28 @@ function buildProfiles(entries, upInterfaces) {
     profiles.push({
       name: name,
       confFile: entries[i].path,
+      unit: managed.indexOf(name) !== -1 ? awgUnitFor(name) : "",
       hasHooks: entries[i].hasHooks === true,
       endpoints: entries[i].endpoints || [],
       defaultRoute: entries[i].defaultRoute === true,
+      configRead: true,
       external: false,
       active: up.indexOf(name) !== -1
+    })
+  }
+  for (var k = 0; k < managed.length; k++) {
+    if (seen[managed[k]]) continue
+    seen[managed[k]] = true
+    profiles.push({
+      name: managed[k],
+      confFile: managed[k],
+      unit: awgUnitFor(managed[k]),
+      hasHooks: false,
+      endpoints: [],
+      defaultRoute: false,
+      configRead: false,
+      external: false,
+      active: up.indexOf(managed[k]) !== -1
     })
   }
   for (var j = 0; j < up.length; j++) {
@@ -170,14 +259,37 @@ function buildProfiles(entries, upInterfaces) {
     profiles.push({
       name: up[j],
       confFile: up[j],
+      unit: "",
       hasHooks: false,
       endpoints: [],
       defaultRoute: false,
+      configRead: false,
       external: true,
       active: true
     })
   }
   return profiles
+}
+
+// The command that brings a profile up ("up") or down ("down"), and whether the
+// backend has to elevate it.
+//
+// A systemd-managed tunnel has to be driven through its unit. Taking it down
+// with a bare `awg-quick down` leaves `awg-quick@<name>.service` — a oneshot
+// with RemainAfterExit — reporting active with no interface behind it, and a
+// later `systemctl start` is then a silent no-op: the unit believes it is
+// already running. systemctl also needs no elevation of its own; polkit
+// decides, which lets a rule scoped to these units connect without a prompt,
+// and falls back to the session's polkit agent where there is none.
+//
+// "up" restarts rather than starts for that same reason: a tunnel taken down
+// behind the unit's back can only be brought back by stopping the unit first,
+// and on a unit that is really inactive a restart is just a start.
+function awgControlCommand(profile, verb) {
+  if (profile && profile.unit) {
+    return { argv: ["systemctl", verb === "up" ? "restart" : "stop", profile.unit], elevate: false }
+  }
+  return { argv: [verb === "up" ? "up" : "down", profile ? profile.confFile : ""], elevate: true }
 }
 
 // One line per up interface, "<iface>\t<rxBytes>\t<txBytes>", built by the
@@ -248,13 +360,18 @@ function awgTargets(profiles) {
     var detailText = "AmneziaWG profile"
     if (profile.hasHooks) detailText = "Blocked: contains root hooks"
     else if (profile.external) detailText = profile.active ? "Connected · started outside the widget" : "Started outside the widget"
-    else if (profile.active) detailText = "Connected"
+    else if (profile.active) detailText = profile.unit ? "Connected · systemd unit" : "Connected"
+    else if (profile.unit) detailText = "AmneziaWG profile · systemd unit"
     targets.push({
       key: "profile:" + profile.name,
-      label: profile.name,
+      label: awgLabel(profile),
+      // The interface name, which the label no longer is once profileNames
+      // renames it: anything that needs a file or unit reads this.
+      name: profile.name,
       detail: detailText,
       glyph: profile.hasHooks ? Shared.GLYPH_SHIELD_LOCK : Shared.GLYPH_SHIELD,
       confFile: profile.confFile,
+      unit: profile.unit || "",
       active: profile.active === true,
       external: profile.external === true,
       hasHooks: profile.hasHooks === true,
@@ -271,7 +388,7 @@ function awgTargets(profiles) {
 
 function awgSummary(profiles) {
   for (var i = 0; i < profiles.length; i++) {
-    if (profiles[i].active) return profiles[i].name
+    if (profiles[i].active) return awgLabel(profiles[i])
   }
   return profiles.length === 0 ? "No profiles" : "Not connected"
 }
@@ -283,11 +400,12 @@ function awgDetails(profiles, healthByInterface) {
     if (!profile.active) continue
     var iface = interfaceFor(profile.confFile)
     var health = healthByInterface ? healthByInterface[iface] : null
-    rows.push(Shared.detail("Profile", profile.name))
+    rows.push(Shared.detail("Profile", awgLabel(profile)))
     rows.push(Shared.detail("Interface", iface))
-    // An externally started tunnel has a config this widget never read, so the
-    // rows that come from one are left out rather than guessed at.
-    if (!profile.external) {
+    // An externally started tunnel, like most systemd-managed ones, has a config
+    // this widget never read, so the rows that come from one are left out
+    // rather than guessed at.
+    if (!profile.external && profile.configRead !== false) {
       if (profile.endpoints && profile.endpoints.length > 0) {
         rows.push(Shared.detail("Endpoint", profile.endpoints.join(", ")))
       }
@@ -300,7 +418,8 @@ function awgDetails(profiles, healthByInterface) {
       rows.push(Shared.detail("Uploaded", formatBytes(health.txBytes)))
     }
   }
-  if (rows.length > 0) rows.push(Shared.detail("Managed by", "awg-quick"))
+  var active = activeAwgProfile(profiles)
+  if (rows.length > 0) rows.push(Shared.detail("Managed by", active && active.unit ? active.unit : "awg-quick"))
   return rows
 }
 
