@@ -20,6 +20,7 @@ var GLYPH_SHIELD_LOCK = String.fromCodePoint(0xF099D)
 var GLYPH_CHEVRON_DOWN = String.fromCodePoint(0xF0140)
 var GLYPH_CHEVRON_UP = String.fromCodePoint(0xF0143)
 var GLYPH_COG = String.fromCodePoint(0xF0493)
+var GLYPH_MAP_MARKER = String.fromCodePoint(0xF034E)
 
 // ----------------------------------------------------------------- shared
 
